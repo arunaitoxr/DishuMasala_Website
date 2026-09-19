@@ -21,6 +21,7 @@ import { CollectionFaq } from "@/components/sections/CollectionFaq";
 import { SetWhatsAppOrderMessage } from "@/components/marketing/SetWhatsAppOrderMessage";
 import { formatINR } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
+import { getProductVideo } from "@/content/product-videos";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -89,12 +90,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
       : null;
   const otherPillarCollection = otherPillarSlug ? collections.find((c) => c.slug === otherPillarSlug) ?? null : null;
 
-  const slides: GallerySlide[] = product.images
-    .map((img) => {
+  const slides: GallerySlide[] = product.images.flatMap((img) => {
       const url = safeImageUrl(img.storageKey);
-      return url ? { url, alt: img.alt, width: img.width, height: img.height } : null;
-    })
-    .filter((s): s is GallerySlide => s != null);
+      return url ? [{ kind: "image" as const, url, alt: img.alt, width: img.width, height: img.height }] : [];
+    });
+  const productVideo = getProductVideo(product.slug);
+  if (productVideo) slides.push({ kind: "video", ...productVideo });
 
   const primaryImageKey = product.images.find((img) => img.isPrimary)?.storageKey ?? product.images[0]?.storageKey;
   const primaryImageUrl = primaryImageKey ? safeImageUrl(primaryImageKey) : null;
@@ -206,7 +207,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-20">
         <Gallery productName={product.name} slides={slides} />
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
           <PdpInteractive
             productId={product.id}
             productName={product.name}

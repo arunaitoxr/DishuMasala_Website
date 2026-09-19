@@ -32,6 +32,7 @@ export function PromoBannerSlider({
   banners,
   ariaLabel = "Promotions",
   frameRatio,
+  bare = false,
 }: {
   banners: HomepageBanner[];
   ariaLabel?: string;
@@ -51,6 +52,8 @@ export function PromoBannerSlider({
    * the client has signed that layout off.
    */
   frameRatio?: { mobile: string; desktop: string };
+  /** Removes the card chrome for the homepage's primary promotional artwork only. */
+  bare?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -127,7 +130,7 @@ export function PromoBannerSlider({
   const frame = (
     <div
       ref={containerRef}
-      className="promo-banner-frame relative w-full overflow-hidden rounded-xl bg-surface-2 shadow-card"
+      className={`promo-banner-frame relative w-full overflow-hidden ${bare ? "" : "rounded-xl bg-surface-2 shadow-card"}`}
       style={
         {
           "--pb-ratio-mobile": mobileRatio,

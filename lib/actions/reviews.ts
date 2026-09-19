@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { submitReview } from "@/lib/db/mutations/reviews";
 import { getProductBySlug } from "@/lib/db/queries/product-detail";
-import { getApprovedReviews, type ReviewSort } from "@/lib/db/queries/reviews";
+import { getApprovedReviews, getHomepageReviewsPage, type ReviewSort } from "@/lib/db/queries/reviews";
 import { publicUrl } from "@/lib/storage/storage";
 
 const reviewSchema = z.object({
@@ -104,6 +104,13 @@ export interface ReviewsPageResult {
   pageSize: number;
 }
 
+export interface HomepageReviewsPageResult {
+  items: Array<Omit<ReviewPageItem, "photos"> & { productName: string; productSlug: string }>;
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /** Server action behind Reviews.tsx's sort/pagination controls — approved-only, same query as the
  * page's initial server render (lib/db/queries/reviews.ts), so a client-driven page change never
  * has a way to surface a pending review. */
@@ -127,5 +134,15 @@ export async function getReviewsPageAction(
         .map((p) => ({ id: p.id, url: safePublicUrl(p.storageKey) }))
         .filter((p): p is ReviewPagePhoto => p.url != null),
     })),
+  };
+}
+
+/** Approved homepage reviews, in five-card pages. This mirrors the initial server render so
+ * opening View more cannot surface pending reviews. */
+export async function getHomepageReviewsPageAction(page: number): Promise<HomepageReviewsPageResult> {
+  const result = await getHomepageReviewsPage(page);
+  return {
+    ...result,
+    items: result.items.map((item) => ({ ...item, createdAt: new Date(item.createdAt).toISOString() })),
   };
 }

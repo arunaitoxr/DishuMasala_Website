@@ -89,7 +89,7 @@ const PREVIEW_COUNT = 5;
  * than being hidden or faked.
  *
  * Only the top 5 (most recent, since `initialPage` is always fetched with `sort: "recent"`) render
- * inline — everything else, plus sort/pagination, lives behind "Show all N reviews" so a product
+ * inline — everything else, plus sort/pagination, lives behind "View more reviews" so a product
  * with hundreds of reviews doesn't turn the PDP itself into one long scroll.
  */
 export function Reviews({ productSlug, productName, summary, initialPage }: ReviewsProps) {
@@ -147,7 +147,7 @@ export function Reviews({ productSlug, productName, summary, initialPage }: Revi
                   onClick={() => setShowAllOpen(true)}
                   className="mt-4 h-10 rounded-md border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
                 >
-                  Show all {summary.count} reviews
+                  View more reviews ({summary.count})
                 </button>
               )}
             </>

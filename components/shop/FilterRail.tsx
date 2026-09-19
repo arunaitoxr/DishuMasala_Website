@@ -18,7 +18,7 @@ export interface FilterRailProps {
  * shift anything. */
 export function FilterRail({ filters, facets, action }: FilterRailProps) {
   return (
-    <aside aria-label="Filter products" className="hidden w-64 shrink-0 lg:block">
+    <aside aria-label="Filter products" className="sticky top-24 hidden max-h-[calc(100vh-7rem)] w-64 shrink-0 overflow-y-auto pr-3 lg:block">
       <ShopFilterForm formId="shop-filters-desktop" filters={filters} facets={facets} action={action} />
       <AutoSubmitOnChange formId="shop-filters-desktop" />
     </aside>

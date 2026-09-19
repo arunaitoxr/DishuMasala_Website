@@ -4,12 +4,12 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import Image from "next/image";
 import { Placeholder } from "@/components/media/Placeholder";
 import { VisuallyHidden } from "@/components/ui/VisuallyHidden";
-import type { GallerySlide } from "./Gallery";
+import type { ImageGallerySlide } from "./Gallery";
 
 interface ImageLightboxProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  slides: GallerySlide[];
+  slides: ImageGallerySlide[];
   index: number;
   onIndexChange: (index: number) => void;
   title: string;

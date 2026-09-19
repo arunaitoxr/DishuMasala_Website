@@ -3,10 +3,8 @@
 import { useEffect, useRef } from "react";
 
 /**
- * The real "blue turns purple" brew video for the homepage ritual teaser — replaces the
- * "ritual-lemon-brew" AI-placeholder now that the client has supplied the real clip
- * (public/blue-to-purple.mp4). Same 4/5 aspect ratio the placeholder reserved, so there's no
- * layout shift swapping one for the other.
+ * The client-supplied Blue Tea clip for the homepage ritual teaser. It is also the same approved
+ * video surfaced in Blue Tea product galleries, so the experience stays visually consistent.
  *
  * Autoplay only when `prefers-reduced-motion` allows it (CLAUDE.md §5.5: motion collapses to a
  * finished static state under that setting) — checked once on mount rather than relying on a CSS
@@ -32,14 +30,14 @@ export function RitualVideo({ className }: { className?: string }) {
   return (
     <video
       ref={videoRef}
-      src="/blue-to-purple.mp4"
+      src="/product-videos/BlueTea.mp4"
       muted
       playsInline
       controls
       preload="metadata"
       className={className}
       style={{ aspectRatio: "4 / 5", width: "100%", objectFit: "cover" }}
-      aria-label="Blue Tea turning purple as lemon is added"
+      aria-label="Blue Tea preparation video"
     />
   );
 }

@@ -1,9 +1,9 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../index";
-import { collections, productImages, products, variants } from "../schema";
+import { collections, productImages, products, reviews, variants } from "../schema";
 import { paise } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
 import type { ProductCardData, ProductThumbnail } from "@/types/catalog";
@@ -23,7 +23,7 @@ import type { ProductCardData, ProductThumbnail } from "@/types/catalog";
  * `revalidateTag("collection:<slug>")` (and/or "products") for the storefront to pick it up.
  */
 export async function getPublishedProductsByCollectionSlug(slug: string): Promise<ProductCardData[]> {
-  return unstable_cache(() => fetchPublishedProductsByCollectionSlug(slug), ["products-by-collection", slug], {
+  return unstable_cache(() => fetchPublishedProductsByCollectionSlug(slug), ["products-by-collection-v2", slug], {
     tags: ["products", `collection:${slug}`],
   })();
 }
@@ -111,7 +111,9 @@ async function fetchPublishedProductsByCollectionSlug(slug: string): Promise<Pro
   }
 
   await attachImages(Array.from(bySlug.values()));
-  return Array.from(bySlug.values());
+  const productsOut = Array.from(bySlug.values());
+  await attachRatingSummaries(productsOut);
+  return productsOut;
 }
 
 /**
@@ -139,5 +141,27 @@ async function attachImages(productsOut: ProductCardData[]): Promise<void> {
   }
   for (const product of productsOut) {
     product.images = byProductId.get(product.id) ?? [];
+  }
+}
+
+/** One grouped review query for the full shelf. A product with no approved reviews deliberately
+ * receives no rating prop, so cards never display a made-up 0-star score. */
+async function attachRatingSummaries(productsOut: ProductCardData[]): Promise<void> {
+  if (productsOut.length === 0) return;
+  const ids = productsOut.map((p) => p.id);
+  const rows = await db
+    .select({
+      productId: reviews.productId,
+      count: sql<number>`count(*)`,
+      average: sql<number>`avg(${reviews.rating})`,
+    })
+    .from(reviews)
+    .where(and(inArray(reviews.productId, ids), eq(reviews.status, "approved")))
+    .groupBy(reviews.productId);
+
+  const byProductId = new Map(rows.map((row) => [row.productId, { count: Number(row.count), value: Number(row.average) }]));
+  for (const product of productsOut) {
+    const rating = byProductId.get(product.id);
+    if (rating) product.rating = rating;
   }
 }

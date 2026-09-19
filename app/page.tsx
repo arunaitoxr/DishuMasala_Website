@@ -1,5 +1,5 @@
 import { getCollectionsWithStats } from "@/lib/db/queries/collections";
-import { getHomepageReviews } from "@/lib/db/queries/reviews";
+import { getHomepageReviewsPage } from "@/lib/db/queries/reviews";
 import { getPublishedProductsByCollectionSlug } from "@/lib/db/queries/products";
 import {
   getHomepageBanners,
@@ -74,7 +74,7 @@ export default async function Home() {
     spicesBanner,
     classicTeaBanner,
     categoryCircleImages,
-    homepageReviews,
+    homepageReviewsPage,
   ] = await Promise.all([
     getCollectionsWithStats(),
     getPublishedProductsByCollectionSlug("blue-tea"),
@@ -89,7 +89,7 @@ export default async function Home() {
     getSpicesSectionBanner(),
     getClassicTeaSectionBanner(),
     getCategoryCircleImages(),
-    getHomepageReviews(6),
+    getHomepageReviewsPage(),
   ]);
 
   // This file's fixed section order encodes two invariants CLAUDE.md §7.2 (amended) states in
@@ -131,6 +131,12 @@ export default async function Home() {
    * fills the gap, and the gap closes by itself the moment the real images are migrated.
    */
   const leadImage = (list: typeof blueTea) => list.find((p) => p.images.length > 0)?.images[0] ?? null;
+  // Collection names come from Supabase with one intentional display alias requested by the
+  // client. The arrangement below is UI navigation, but it never hardcodes catalogue titles.
+  const displayCollectionTitle = (slug: string) => {
+    if (slug === "classic-teas") return "Black Tea";
+    return collections.find((collection) => collection.slug === slug)?.title ?? "Shop";
+  };
 
   // Category circles grid arranged in 2 rows of 3:
   // 1st Row: Blue Tea, Red Tea, Blue tea-Red Tea Combo
@@ -139,19 +145,19 @@ export default async function Home() {
     // 1st Row
     {
       slug: "blue-tea",
-      title: "Blue Tea",
+      title: displayCollectionTitle("blue-tea"),
       href: "/collections/blue-tea/",
       image: categoryCircleImages["blue-tea"] ?? leadImage(blueTea),
     },
     {
       slug: "red-tea",
-      title: "Red Tea",
+      title: displayCollectionTitle("red-tea"),
       href: "/collections/red-tea/",
       image: categoryCircleImages["red-tea"] ?? leadImage(redTea),
     },
     {
       slug: "blue-tea-red-tea-combo",
-      title: "Blue tea-Red Tea Combo",
+      title: displayCollectionTitle("tea-combos"),
       // Repointed 2026-09-17: this circle used to land on /collections/combos/, which now holds
       // only the spice sets. The Blue/Red tea pairs live in their own `tea-combos` collection.
       href: "/collections/tea-combos/",
@@ -160,13 +166,13 @@ export default async function Home() {
     // 2nd Row
     {
       slug: "spices",
-      title: "Spices",
+      title: displayCollectionTitle("spices"),
       href: "/collections/spices/",
       image: categoryCircleImages["spices"] ?? leadImage(spices),
     },
     {
       slug: "combos",
-      title: "Spices Combo",
+      title: displayCollectionTitle("combos"),
       href: "/collections/combos/",
       // Its own dedicated photo (client-supplied combo pack-lineup shot), not the shared
       // "combos" gift-box image the Blue Tea–Red Tea circle above also falls back to — those two
@@ -180,7 +186,7 @@ export default async function Home() {
       // is unchanged — this is the circle's display label only, which is what the client was
       // looking at. Both products behind it (Classic Tea, Premium Assam Tea) are black teas, so the
       // broader name is also the more accurate one for the category.
-      title: "Black Tea",
+      title: displayCollectionTitle("classic-teas"),
       href: "/collections/classic-teas/",
       image: categoryCircleImages["classic-teas"] ?? leadImage(classicAssam),
     },
@@ -190,7 +196,7 @@ export default async function Home() {
     <>
       <TrustStrip />
       <CategoryCircles items={categoryCircleItems} />
-      <PromoBannerSlider banners={banners} />
+      <PromoBannerSlider banners={banners} bare />
       <TeaBenefitsMarquee />
       <FounderStory />
       <ScrollColorBand fromVar="--color-brew-2" viaVar="--color-brew-5" toVar="--color-hibiscus" className="w-full">
@@ -233,7 +239,14 @@ export default async function Home() {
        * today, so this still renders the empty state; see getHomepageReviews() for why that is
        * correct rather than a bug, and CLAUDE.md §8 for why none were invented to fill it. */}
       <ScrollReveal>
-        {homepageReviews.length > 0 ? <HomepageReviews reviews={homepageReviews} /> : <ReviewsEmptyState />}
+        {homepageReviewsPage.items.length > 0 ? (
+          <HomepageReviews
+            initialPage={{
+              ...homepageReviewsPage,
+              items: homepageReviewsPage.items.map((item) => ({ ...item, createdAt: new Date(item.createdAt).toISOString() })),
+            }}
+          />
+        ) : <ReviewsEmptyState />}
       </ScrollReveal>
       <ScrollReveal>
         <CollectionFaq collectionSlug="general" collectionTitle="Dishu Masala" />

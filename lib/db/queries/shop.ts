@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, eq, exists, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "../index";
-import { collections, productImages, products, variants } from "../schema";
+import { collections, productImages, products, reviews, variants } from "../schema";
 import { paise } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
 import type { ProductCardData } from "@/types/catalog";
@@ -37,7 +37,7 @@ export interface ShopPage {
 export async function getShopPage(filters: ShopFilters): Promise<ShopPage> {
   const cacheKey = JSON.stringify(filters);
   const tags = ["products", ...(filters.collection ? [`collection:${filters.collection}`] : [])];
-  return unstable_cache(() => fetchShopPage(filters), ["shop-page", cacheKey], { tags })();
+  return unstable_cache(() => fetchShopPage(filters), ["shop-page-v2", cacheKey], { tags })();
 }
 
 async function fetchShopPage(filters: ShopFilters): Promise<ShopPage> {
@@ -100,6 +100,14 @@ async function fetchShopPage(filters: ShopFilters): Promise<ShopPage> {
         ),
         '[]'
       )`,
+      ratingCount: sql<number>`(
+        select count(*) from ${reviews}
+        where ${reviews.productId} = ${products.id} and ${reviews.status} = 'approved'
+      )`,
+      ratingAverage: sql<number | null>`(
+        select avg(${reviews.rating}) from ${reviews}
+        where ${reviews.productId} = ${products.id} and ${reviews.status} = 'approved'
+      )`,
       totalCount: sql<number>`count(*) over()`,
     })
     .from(products)
@@ -139,6 +147,9 @@ async function fetchShopPage(filters: ShopFilters): Promise<ShopPage> {
       imageUrl: null,
     })),
     images: r.imagesJson.map((img) => ({ url: publicUrl(img.storageKey), alt: img.alt, width: img.width, height: img.height })),
+    ...(Number(r.ratingCount) > 0 && r.ratingAverage != null
+      ? { rating: { count: Number(r.ratingCount), value: Number(r.ratingAverage) } }
+      : {}),
   }));
 
   return {

@@ -88,6 +88,9 @@ export function ProductCard({
   const [primary, secondary] = images;
   const href = `/product/${slug}/`;
   const addItem = useCartStore((s) => s.addItem);
+  // A card has no safe way to infer which of several options a shopper meant. Sending a shopper
+  // to the PDP for an explicit selection is clearer than silently adding the first pack size.
+  const requiresOptionSelection = optionValues.length > 1;
 
   const toggleWishlist = () => {
     if (onToggleWishlist) {
@@ -100,7 +103,7 @@ export function ProductCard({
   // Real add-to-cart (same lib/store/cart.ts action the PDP's "Add to cart" uses, which also
   // opens the cart drawer for feedback) — every card on the homepage/shop/carousels used to render
   // a "Quick add" button with no `onQuickAdd` ever wired up anywhere, so clicking it did nothing.
-  const canQuickAdd = onQuickAdd != null || (primaryVariant != null && productId != null && primaryVariant.inStock);
+  const canQuickAdd = !requiresOptionSelection && (onQuickAdd != null || (primaryVariant != null && productId != null && primaryVariant.inStock));
   const quickAdd = () => {
     if (onQuickAdd) {
       onQuickAdd();
@@ -229,16 +232,22 @@ export function ProductCard({
            * the shared size scale and disabled handling. `relative z-20` stays: the whole card is
            * covered by a stretched link overlay, and the button has to sit above it to stay
            * clickable. */}
-          <Button
-            type="button"
-            variant="gradient"
-            size="sm"
-            onClick={quickAdd}
-            disabled={!canQuickAdd}
-            className="relative z-20 w-full"
-          >
-            {primaryVariant && !primaryVariant.inStock ? "Out of stock" : "Add to cart"}
-          </Button>
+          {requiresOptionSelection ? (
+            <Button asChild variant="outline" size="sm" className="relative z-20 w-full">
+              <Link href={href}>Choose {optionLabel.toLowerCase()}</Link>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="gradient"
+              size="sm"
+              onClick={quickAdd}
+              disabled={!canQuickAdd}
+              className="relative z-20 w-full"
+            >
+              {primaryVariant && !primaryVariant.inStock ? "Out of stock" : "Add to cart"}
+            </Button>
+          )}
         </div>
       </div>
     </article>

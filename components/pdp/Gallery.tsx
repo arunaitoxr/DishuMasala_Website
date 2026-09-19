@@ -6,12 +6,23 @@ import { Placeholder } from "@/components/media/Placeholder";
 import { ImageLightbox } from "./ImageLightbox";
 import { cn } from "@/lib/cn";
 
-export interface GallerySlide {
+export interface ImageGallerySlide {
+  kind: "image";
   url: string;
   alt: string;
   width: number;
   height: number;
 }
+
+export interface VideoGallerySlide {
+  kind: "video";
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
+}
+
+export type GallerySlide = ImageGallerySlide | VideoGallerySlide;
 
 export interface GalleryProps {
   productName: string;
@@ -38,6 +49,7 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
   const hasReal = slides.length > 0;
   const count = hasReal ? slides.length : 1;
   const current = hasReal ? slides[index] : null;
+  const imageSlides = slides.filter((slide): slide is ImageGallerySlide => slide.kind === "image");
 
   const goTo = (i: number) => setIndex(((i % count) + count) % count);
 
@@ -48,6 +60,10 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
     thumbRefs.current[index]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [index]);
 
+  const openLightbox = () => {
+    if (current?.kind === "image") setZoomOpen(true);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowRight") {
       e.preventDefault();
@@ -55,9 +71,9 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       goTo(index - 1);
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if ((e.key === "Enter" || e.key === " ") && current?.kind === "image") {
       e.preventDefault();
-      setZoomOpen(true);
+      openLightbox();
     }
   };
 
@@ -83,7 +99,7 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
         type="button"
         role="tab"
         aria-selected={i === index}
-        aria-label={`View photo ${i + 1} of ${count}`}
+        aria-label={`View ${slides[i]?.kind === "video" ? "video" : "photo"} ${i + 1} of ${count}`}
         onClick={() => goTo(i)}
         className={cn(
           "shrink-0 overflow-hidden rounded-md border-2 transition-colors duration-[180ms]",
@@ -92,8 +108,15 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
         )}
         style={{ aspectRatio: "1 / 1" }}
       >
-        {slides[i] ? (
+        {slides[i]?.kind === "image" ? (
           <Image src={slides[i].url} alt="" width={72} height={72} className="h-full w-full object-cover" />
+        ) : slides[i]?.kind === "video" ? (
+          <span className="relative block h-full w-full bg-ink">
+            <video src={slides[i].url} muted playsInline preload="metadata" className="h-full w-full object-cover" aria-hidden="true" />
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-ink/25 text-white">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-5"><path d="M6 4.5v11l9-5.5-9-5.5Z" /></svg>
+            </span>
+          </span>
         ) : (
           <Placeholder slot="product-packshot-generic" className="h-full w-full" />
         )}
@@ -111,35 +134,49 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
         <div
           ref={mainRef}
           role="group"
-          aria-roledescription="image gallery"
-          aria-label={`${productName} photos`}
+          aria-roledescription="product media gallery"
+          aria-label={`${productName} photos and videos`}
           tabIndex={0}
           onKeyDown={onKeyDown}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          onClick={() => setZoomOpen(true)}
-          className="relative min-w-0 flex-1 cursor-zoom-in overflow-hidden rounded-lg bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-brew-2 focus-visible:ring-offset-2"
+          onClick={openLightbox}
+          className={cn(
+            "relative min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-brew-2 focus-visible:ring-offset-2",
+            current?.kind === "image" && "cursor-zoom-in",
+          )}
           style={{ aspectRatio: "1 / 1" }}
         >
-          {current ? (
+          {current?.kind === "image" ? (
             <Image
               src={current.url}
               alt={current.alt}
               width={current.width}
               height={current.height}
               priority={index === 0}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
+            />
+          ) : current?.kind === "video" ? (
+            <video
+              src={current.url}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={current.alt}
+              className="h-full w-full object-contain bg-ink"
             />
           ) : (
             <Placeholder slot="product-packshot-generic" className="h-full w-full" />
           )}
-          <span className="sr-only">{activeAlt}. Press Enter to zoom, arrow keys to browse.</span>
+          <span className="sr-only">
+            {activeAlt}. {current?.kind === "image" ? "Press Enter to zoom." : "Use the video controls to play."} Arrow keys browse media.
+          </span>
         </div>
 
         {count > 1 && (
           <div
             role="tablist"
-            aria-label="Product photos"
+            aria-label="Product media"
             className="hidden max-h-full flex-col gap-2.5 overflow-y-auto pr-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden"
           >
             {Array.from({ length: count }, (_, i) => Thumb(i, true))}
@@ -150,7 +187,7 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
       {count > 1 && (
         <div
           role="tablist"
-          aria-label="Product photos"
+          aria-label="Product media"
           className="flex gap-2 overflow-x-auto overscroll-x-contain scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
         >
           {Array.from({ length: count }, (_, i) => Thumb(i, false))}
@@ -160,9 +197,13 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
       <ImageLightbox
         open={zoomOpen}
         onOpenChange={setZoomOpen}
-        slides={slides}
-        index={index}
-        onIndexChange={goTo}
+        slides={imageSlides}
+        index={current?.kind === "image" ? imageSlides.findIndex((slide) => slide.url === current.url) : 0}
+        onIndexChange={(imageIndex) => {
+          const activeImage = imageSlides[imageIndex];
+          const galleryIndex = slides.findIndex((slide) => slide.kind === "image" && slide.url === activeImage?.url);
+          if (galleryIndex >= 0) goTo(galleryIndex);
+        }}
         title={activeAlt}
       />
     </div>

@@ -32,5 +32,6 @@ export function toProductCardProps(product: ProductCardData): ProductCardProps {
     primaryVariant: primary
       ? { id: primary.id, sku: primary.sku, optionValue: primary.optionValue, inStock: primary.inStock }
       : undefined,
+    rating: product.rating,
   };
 }

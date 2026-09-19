@@ -195,14 +195,29 @@ export interface HomepageReviewItem {
  *
  * Cached on the shared `reviews` tag so approving a review in the admin refreshes the homepage.
  */
-export async function getHomepageReviews(limit = 6): Promise<HomepageReviewItem[]> {
-  return unstable_cache(() => fetchHomepageReviews(limit), ["homepage-reviews", String(limit)], {
-    tags: ["reviews"],
-  })();
+export interface HomepageReviewsPage {
+  items: HomepageReviewItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
-async function fetchHomepageReviews(limit: number): Promise<HomepageReviewItem[]> {
-  const rows = await db
+/** Homepage social proof, paged at five cards per view. The landing page renders only its first
+ * five cards, with the remaining approved reviews available through View more. */
+export async function getHomepageReviewsPage(page = 1): Promise<HomepageReviewsPage> {
+  const safePage = Math.max(1, page);
+  return unstable_cache(
+    () => fetchHomepageReviewsPage(safePage),
+    ["homepage-reviews", String(safePage)],
+    { tags: ["reviews"] },
+  )();
+}
+
+async function fetchHomepageReviewsPage(page: number): Promise<HomepageReviewsPage> {
+  const pageSize = 5;
+  const where = and(eq(reviews.status, "approved"), eq(products.status, "published"));
+  const [rows, [{ total }]] = await Promise.all([
+    db
     .select({
       id: reviews.id,
       authorName: reviews.authorName,
@@ -216,9 +231,17 @@ async function fetchHomepageReviews(limit: number): Promise<HomepageReviewItem[]
     })
     .from(reviews)
     .innerJoin(products, eq(products.id, reviews.productId))
-    .where(and(eq(reviews.status, "approved"), eq(products.status, "published")))
+    .where(where)
     .orderBy(desc(reviews.createdAt))
-    .limit(limit);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize),
+    db.select({ total: sql<number>`count(*)` }).from(reviews).innerJoin(products, eq(products.id, reviews.productId)).where(where),
+  ]);
 
-  return rows.map((r) => ({ ...r, createdAt: new Date(r.createdAt) }));
+  return {
+    items: rows.map((r) => ({ ...r, createdAt: new Date(r.createdAt) })),
+    total: Number(total),
+    page,
+    pageSize,
+  };
 }

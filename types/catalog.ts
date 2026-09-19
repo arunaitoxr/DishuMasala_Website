@@ -100,4 +100,7 @@ export interface ProductCardData extends Product {
   collectionSlug: string;
   collectionTitle: string;
   images: ProductThumbnail[];
+  /** Approved review aggregate computed from Supabase/Postgres. Omitted only when a card query
+   * intentionally does not need the extra aggregate. */
+  rating?: { value: number; count: number };
 }

@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/shop/ProductGrid";
-import { PromoBannerSlider } from "@/components/hero/PromoBannerSlider";
 import { CollectionFaq } from "@/components/sections/CollectionFaq";
 import { MarqueeStrip } from "@/components/layout/MarqueeStrip";
 import { COLLECTIONS_WITH_BENEFIT_STRIP, TEA_BENEFIT_STRIP } from "@/content/collection-benefits";
 import { getAllCollectionSlugs, getCollectionBySlug } from "@/lib/db/queries/collections";
 import { getPublishedProductsByCollectionSlug } from "@/lib/db/queries/products";
-import { getCollectionPageBanner } from "@/lib/db/queries/settings";
 import { GRADIENT_TILE_SLUGS } from "@/lib/nav";
 import { resolveFamilyAccent, familyAccentVar } from "@/lib/family-accent";
+import { CATEGORY_BANNER_ASSETS } from "@/content/category-banners";
+import { CollectionHero } from "@/components/collections/CollectionHero";
 
 interface CollectionPageProps {
   params: Promise<{ slug: string }>;
@@ -128,32 +128,16 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
   const collection = await getCollectionBySlug(slug);
   if (!collection) notFound();
 
-  const [products, pageBanner] = await Promise.all([
-    getPublishedProductsByCollectionSlug(slug),
-    getCollectionPageBanner(slug),
-  ]);
+  const products = await getPublishedProductsByCollectionSlug(slug);
+  const suppliedHero = CATEGORY_BANNER_ASSETS[collection.slug];
 
   return (
     <div>
-      {/* Order: [banner] < Hero < Products < FAQ.
-       *
-       * The banner leads the page again (client, 2026-09-17, second request that day — it had been
-       * moved to the foot of the page earlier the same day, and that instruction is now superseded:
-       * "all the categories inside pages should have banner at the top, not at the bottom").
-       * The banner keeps the contained rounded-card frame the client chose on 2026-09-11 — that
-       * decision is about how the banner is framed, and is unaffected by where it sits. */}
-      {pageBanner.length > 0 && (
-        <PromoBannerSlider
-          banners={pageBanner}
-          ariaLabel={`${collection.title} promotions`}
-          /* One frame for every collection page, so they all open at the same height (client,
-           * 2026-09-17: "all the category pages are totally inconsistent, one has large banner,
-           * one has small"). 12/5 desktop matches the homepage banner shape, so the whole site
-           * shares one banner proportion; 4/5 mobile is the shape most of the portrait crops
-           * already use. See PromoBannerSlider's `frameRatio` for why letterboxing is safe here. */
-          frameRatio={{ mobile: "4 / 5", desktop: "12 / 5" }}
-        />
-      )}
+      {/* The collection main banner is always the supplied CategoryBanners asset, unchanged. A
+       * collection with no supplied art gets no substitute Supabase promotion in this position. */}
+      {suppliedHero ? (
+        <CollectionHero title={collection.title} asset={suppliedHero} />
+      ) : null}
 
       {/* Benefit strip, directly under the banner (client bug list row 3, 2026-09-17: "location
        * below the category banners of blue tea , red tea"). Reuses the shared MarqueeStrip rather
@@ -167,14 +151,26 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         />
       )}
 
-      <CollectionHeader
-        title={collection.title}
-        tagline={collection.tagline}
-        slug={collection.slug}
-        belowBanner={pageBanner.length > 0}
-      />
+      {!suppliedHero && (
+        <CollectionHeader
+          title={collection.title}
+          tagline={collection.tagline}
+          slug={collection.slug}
+        />
+      )}
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
+      <section aria-labelledby="collection-products-heading" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
+        {suppliedHero && (
+          <div className="mb-7 flex items-end justify-between gap-4 sm:mb-9">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Shop the collection</p>
+              <h2 id="collection-products-heading" className="mt-2 font-display text-2xl font-semibold tracking-[-0.015em] text-ink sm:text-3xl">
+                {collection.title}
+              </h2>
+            </div>
+            <p className="shrink-0 text-sm text-ink-2">{products.length} products</p>
+          </div>
+        )}
         {products.length === 0 ? (
           <p className="rounded-lg border border-line bg-surface-2 px-6 py-16 text-center text-ink-2">
             No products are published in this collection yet.
@@ -182,7 +178,7 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         ) : (
           <ProductGrid products={products} />
         )}
-      </div>
+      </section>
 
       <CollectionFaq collectionSlug={collection.slug} collectionTitle={collection.title} />
     </div>
