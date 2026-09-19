@@ -1,6 +1,6 @@
 /**
- * Uploads the client-supplied homepage promotional banners (data/banners/*.png — provided
- * directly by the client, not scraped from the old site) to Supabase Storage and saves
+ * Uploads the client-supplied homepage main banners (data/mainBanner/*.png — provided directly by
+ * the client, not scraped from the old site) to Supabase Storage and saves
  * `settings.homepage_banners`, an ordered list the homepage slider reads.
  *
  * IMPORTANT — deliberate, explicit exception to CLAUDE.md §8 ("invent nothing" / no health
@@ -16,33 +16,33 @@
 import { closeScriptDb } from "../lib/db/script-client";
 import { migrateBannerSet, type BannerSource } from "./_lib/banner-migrate";
 
+/** The client's main-banner set (2026-09-20), in data/mainBanner/: `MB<n>_W.png` wide for desktop,
+ * `MB<n>_M.png` 4:5 for phones, shown in file-number order. */
 const BANNERS: BannerSource[] = [
   {
-    slot: "blue-tea-chai",
-    file: "hero banner.png",
-    // Portrait crop for narrow viewports (client-supplied — the landscape desktop banner crops
-    // away too much of the pack/copy on a phone-width screen otherwise).
-    mobileFile: "M_Hero Banner.png",
-    alt: "Blue by Nature, Better by Choice — Dishu Premium Herbal Blue Tea, 100% herbal, caffeine-free, zero sugar, enriched with Butterfly Pea Flower",
-    href: "/collections/blue-tea",
+    slot: "main-spices",
+    file: "MB1_W.png",
+    mobileFile: "MB1_M.png",
+    alt: "Every Spice Tells a Story of Good Food — Dishu Turmeric, Red Chilli, Coriander, Garam Masala and Black Pepper powders",
+    href: "/collections/spices/",
   },
   {
-    slot: "red-tea-chai",
-    file: "hero banner red tea.png",
-    mobileFile: "M_hero banner red tea.jpg",
-    alt: "A Cup of Natural Goodness with Dishu — Chai with Dishu, Caffeine Free Premium Herbal Red Tea enriched with Hibiscus Flower",
-    href: "/collections/red-tea",
+    slot: "main-blue-tea",
+    file: "MB2_W.png",
+    mobileFile: "MB2_M.png",
+    alt: "Nature's Blue. A Healthier You. — Dishu Premium Herbal Blue Tea with a cup of blue butterfly pea tea",
+    href: "/collections/blue-tea/",
   },
   {
-    slot: "pure-spices",
-    file: "hero banner spices.png",
-    mobileFile: "M_hero banner spices.jpg",
-    alt: "Pure Spices. Healthier You. — Spices with Dishu, 100% natural, no additives, rich aroma and bold taste",
-    href: "/collections/spices",
+    slot: "main-red-tea",
+    file: "MB3_W.png",
+    mobileFile: "MB3_M.png",
+    alt: "A Cup of Goodness, Everyday — Dishu Premium Herbal Red Tea with a cup of hibiscus tea",
+    href: "/collections/red-tea/",
   },
 ];
 
-migrateBannerSet("homepage_banners", BANNERS)
+migrateBannerSet("homepage_banners", BANNERS, "data/mainBanner")
   .catch((err) => {
     console.error(err);
     process.exitCode = 1;

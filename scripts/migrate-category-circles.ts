@@ -1,9 +1,9 @@
 /**
- * Uploads the client-supplied per-collection photos (data/category/1.png..6.png) for the
- * homepage's CategoryCircles strip and saves `settings.category_circle_images` — replacing the
- * earlier interim behaviour of borrowing each collection's top-priority product's primary image
- * (which, for several collections, is a marketing infographic rather than a clean lifestyle shot,
- * and looked bad cropped into a small circle).
+ * Uploads the client-supplied per-collection photos in data/category/ for the homepage's
+ * CategoryCircles strip and saves `settings.category_circle_images`, keyed by collection slug.
+ *
+ * The six photos are one consistent studio set (same light, same ground), which is what makes the
+ * strip read as one row rather than six unrelated crops of marketing infographics.
  *
  * Run with: pnpm migrate-category-circles
  */
@@ -15,25 +15,18 @@ import { processImage } from "../lib/storage/images";
 import { closeScriptDb, scriptDb } from "../lib/db/script-client";
 import { settings } from "../lib/db/schema";
 
+/** Collection slug -> the client's file in data/category/ (named by the client, 2026-09-20). */
 const FILES: Record<string, { file: string; alt: string }> = {
-  "blue-tea": { file: "1.png", alt: "Dishu Premium Herbal Blue Tea pack, butterfly pea flower tea" },
-  spices: { file: "2.png", alt: "Dishu Spices pack, assorted whole and ground Indian spices" },
-  "red-tea": { file: "3.png", alt: "Dishu Premium Herbal Red Tea pack, hibiscus flower tea" },
-  "classic-teas": { file: "4.png", alt: "Dishu Classic Tea and Assam Tea packs" },
-  combos: { file: "5.png", alt: "Dishu Masala gift box with Blue Tea, Red Tea and Spices packs" },
-  // Distinct from "spices" above — the "Spices Combo" circle (app/page.tsx) is a different
-  // collection tile than the single-pack "Spices" one, and both used to fall back to the shared
-  // "combos" key (the Blue Tea–Red Tea gift-box photo), which was the wrong image for it. Client
-  // supplied this exact combo pack-lineup photo (2026-09-17) for that circle specifically.
-  "spices-combo": { file: "6.png", alt: "Dishu Spices Combo — Turmeric, Red Chilli, Coriander, Black Pepper and Garam Masala packs" },
+  "blue-tea": { file: "BlueTea.png", alt: "Dishu Premium Herbal Blue Tea pack with a cup of blue butterfly pea tea" },
+  "red-tea": { file: "RedTea.png", alt: "Dishu Premium Herbal Red Tea pack with a cup of hibiscus tea" },
+  "tea-combos": { file: "TeaCombo.png", alt: "Dishu Blue Tea and Red Tea packs side by side" },
+  spices: { file: "Spices.png", alt: "Dishu Black Pepper Powder pack with whole and ground pepper" },
+  combos: { file: "SpiceCombo.png", alt: "Dishu spice range — Black Pepper, Coriander, Garam Masala and Red Chilli packs" },
+  "classic-teas": { file: "BlackTea.png", alt: "Dishu Black Tea packs with a glass of milk tea" },
 };
 
 async function main(): Promise<void> {
-  // Reads from inside the repo, not ~/Downloads (changed 2026-09-17). The old path meant this
-  // script only ever worked on the one machine where the client's files happened to be sitting in
-  // a Downloads folder — it threw ENOENT on every other machine and in CI, which is why the
-  // homepage circles had no images. Drop the six source files into data/category/ and commit them
-  // like every other client-supplied asset in data/.
+  // Reads from inside the repo (never ~/Downloads), so it runs the same on every machine and in CI.
   const dir = join(process.cwd(), "data/category");
   const value: Record<string, { storageKey: string; width: number; height: number; alt: string }> = {};
 
@@ -42,11 +35,7 @@ async function main(): Promise<void> {
     if (!existsSync(source)) {
       // A clear instruction beats a raw ENOENT stack. Until these land, app/page.tsx falls back to
       // each collection's lead product photo, so the circles render something real either way.
-      throw new Error(
-        `Missing ${source}.\nPut the client's six category photos in data/category/ as 1.png .. 6.png ` +
-          `(1 blue-tea, 2 spices, 3 red-tea, 4 classic-teas, 5 combos, 6 spices-combo), then re-run ` +
-          `\`pnpm migrate-category-circles\`.`,
-      );
+      throw new Error(`Missing ${source}. See data/category/README.md for the expected file names.`);
     }
     const buffer = readFileSync(source);
     const processed = await processImage(buffer);

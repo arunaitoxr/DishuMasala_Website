@@ -21,11 +21,17 @@ export interface ProcessedImage {
 }
 
 /**
- * Sharp pipeline producing AVIF + WebP derivatives at DERIVATIVE_WIDTHS (CLAUDE.md §2 / §8).
+ * Sharp pipeline producing AVIF + WebP derivatives at DERIVATIVE_WIDTHS, or the `widths` a caller
+ * passes (CLAUDE.md §2 / §8).
  * Never upscales — a source narrower than a target width is only ever rendered at its own width,
  * and duplicate target widths (small source images) collapse to one derivative per format.
  */
-export async function processImage(input: Buffer): Promise<ProcessedImage> {
+export async function processImage(
+  input: Buffer,
+  /** Override for artwork shown wider than a product photo ever is — e.g. the full-bleed homepage
+   * banner, which a 1200px derivative would render soft on any screen wider than 1200px. */
+  widths: readonly number[] = DERIVATIVE_WIDTHS,
+): Promise<ProcessedImage> {
   const metadata = await sharp(input, { failOn: "none" }).metadata();
   const originalWidth = metadata.width;
   const originalHeight = metadata.height;
@@ -33,7 +39,7 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
     throw new Error("processImage: could not read source image dimensions");
   }
 
-  const targetWidths = [...new Set(DERIVATIVE_WIDTHS.map((w) => Math.min(w, originalWidth)))];
+  const targetWidths = [...new Set(widths.map((w) => Math.min(w, originalWidth)))];
   const derivatives: ImageDerivative[] = [];
 
   for (const targetWidth of targetWidths) {

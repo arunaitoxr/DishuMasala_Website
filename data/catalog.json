@@ -1,7 +1,7 @@
 {
   "currency": "INR",
   "freeShippingThreshold": 499,
-  "priorityRule": "Two co-equal pillars, Tea and Masala, interleaved rather than cascaded (CLAUDE.md §7.2, amended): Blue Tea (1) > Spices (2) > Red Tea (3) > Combo Packs (4) > Classic & Assam (5). Lower rank = higher placement everywhere. Blue Tea keeps the single strongest lead hook (the Lemon Shift), but the very next slot is Masala, not more tea — a visitor no longer has to clear the entire tea range before the site shows a single spice product.",
+  "priorityRule": "Two co-equal pillars, Tea and Masala, interleaved rather than cascaded (CLAUDE.md §7.2, amended): Blue Tea (1) > Spices (2) > Red Tea (3) > Combo Packs (4) > Black Tea (5). Lower rank = higher placement everywhere. Blue Tea keeps the single strongest lead hook (the Lemon Shift), but the very next slot is Masala, not more tea — a visitor no longer has to clear the entire tea range before the site shows a single spice product.",
   "collections": [
     {
       "slug": "blue-tea",
@@ -17,7 +17,7 @@
     },
     {
       "slug": "classic-teas",
-      "title": "Classic & Assam",
+      "title": "Black Tea",
       "tagline": "Everyday strength, garden-fresh",
       "rank": 5
     },

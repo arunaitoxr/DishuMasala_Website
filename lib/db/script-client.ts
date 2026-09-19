@@ -17,7 +17,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-export { eq, inArray, sql } from "drizzle-orm";
+export { and, eq, inArray, sql } from "drizzle-orm";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

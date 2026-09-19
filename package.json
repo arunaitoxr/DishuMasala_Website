@@ -38,6 +38,8 @@
     "migrate-corporate-gifting-hero": "tsx --env-file-if-exists=.env scripts/migrate-corporate-gifting-hero.ts",
     "migrate-gifting-images": "tsx --env-file-if-exists=.env scripts/migrate-gifting-images.ts",
     "set-support-email": "tsx --env-file-if-exists=.env scripts/set-support-email.ts",
+    "rename-classic-teas-to-black-tea": "tsx --env-file-if-exists=.env scripts/rename-classic-teas-to-black-tea.ts",
+    "remove-duplicate-blue-tea-teabag-variants": "tsx --env-file-if-exists=.env scripts/remove-duplicate-blue-tea-teabag-variants.ts",
     "set-trust-strip-thresholds": "tsx --env-file-if-exists=.env scripts/set-trust-strip-thresholds.ts",
     "set-whatsapp-number": "tsx --env-file-if-exists=.env scripts/set-whatsapp-number.ts",
     "update-blue-tea-wellness-benefits": "tsx --env-file-if-exists=.env scripts/update-blue-tea-wellness-benefits.ts",

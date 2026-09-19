@@ -11,6 +11,8 @@ import { processImage } from "../../lib/storage/images";
 import { scriptDb } from "../../lib/db/script-client";
 import { settings } from "../../lib/db/schema";
 
+const BANNER_WIDTHS = [800, 1200, 1920] as const;
+
 export interface BannerSource {
   slot: string;
   file: string;
@@ -34,9 +36,11 @@ export interface MigratedBanner extends MigratedBannerImage {
   mobile?: MigratedBannerImage;
 }
 
-async function uploadOne(file: string, slot: string): Promise<MigratedBannerImage> {
-  const buffer = readFileSync(join(process.cwd(), "data/banners", file));
-  const processed = await processImage(buffer);
+async function uploadOne(file: string, slot: string, sourceDir: string): Promise<MigratedBannerImage> {
+  const buffer = readFileSync(join(process.cwd(), sourceDir, file));
+  // Banners run wider than product photos (the homepage main banner is full-bleed), so they also get
+  // a 1920px derivative — capped at the source width, never enlarged.
+  const processed = await processImage(buffer, BANNER_WIDTHS);
   // Content hash (not a fixed "current" slug) so swapping a banner's source image gives every
   // derivative a brand-new key/URL — otherwise the browser and Next's own image-optimizer cache
   // keep serving the previous picture forever under the unchanged URL (a real bug hit and fixed
@@ -62,18 +66,23 @@ async function uploadOne(file: string, slot: string): Promise<MigratedBannerImag
   return { storageKey: canonicalKey, width: canonicalWidth, height: canonicalHeight };
 }
 
-async function migrateOne(banner: BannerSource): Promise<MigratedBanner> {
+async function migrateOne(banner: BannerSource, sourceDir: string): Promise<MigratedBanner> {
   const [main, mobile] = await Promise.all([
-    uploadOne(banner.file, banner.slot),
-    banner.mobileFile ? uploadOne(banner.mobileFile, `${banner.slot}-mobile`) : Promise.resolve(undefined),
+    uploadOne(banner.file, banner.slot, sourceDir),
+    banner.mobileFile ? uploadOne(banner.mobileFile, `${banner.slot}-mobile`, sourceDir) : Promise.resolve(undefined),
   ]);
 
   return { ...main, slot: banner.slot, alt: banner.alt, href: banner.href, mobile };
 }
 
-/** Uploads every banner in `sources`, then upserts the result array under `settingsKey`. */
-export async function migrateBannerSet(settingsKey: string, sources: BannerSource[]): Promise<MigratedBanner[]> {
-  const uploaded = await Promise.all(sources.map(migrateOne));
+/** Uploads every banner in `sources` (files read from `sourceDir`, relative to the repo root), then
+ * upserts the result array under `settingsKey`. */
+export async function migrateBannerSet(
+  settingsKey: string,
+  sources: BannerSource[],
+  sourceDir = "data/banners",
+): Promise<MigratedBanner[]> {
+  const uploaded = await Promise.all(sources.map((source) => migrateOne(source, sourceDir)));
 
   await scriptDb
     .insert(settings)
