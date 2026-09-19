@@ -26,7 +26,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
         "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-sm font-medium transition-colors duration-[180ms]",
         "disabled:opacity-50 disabled:pointer-events-none",
         selected
-          ? "border-ink bg-ink text-surface"
+          ? "border-citrus bg-citrus text-ink" // same selected state as the product page's pack cards
           : "border-line bg-surface text-ink-2 hover:border-ink-3",
         className,
       )}

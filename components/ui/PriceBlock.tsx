@@ -8,6 +8,9 @@ export interface PriceBlockProps {
   size?: "md" | "lg";
   /** Show the "Inclusive of all taxes" affordance (CLAUDE.md §4). Default true. */
   showTaxNote?: boolean;
+  /** Leading qualifier for a price that depends on the chosen option — "From" on a product card
+   * whose pack sizes are priced differently (the lowest real variant price, never a guessed one). */
+  prefix?: string;
   className?: string;
 }
 
@@ -16,13 +19,14 @@ export interface PriceBlockProps {
  * (CLAUDE.md §7.3). When price === MRP there is no genuine saving, so — deliberately — no
  * strikethrough and no chip render at all, not even "Save 0%".
  */
-export function PriceBlock({ mrpPaise, pricePaise, size = "md", showTaxNote = true, className }: PriceBlockProps) {
+export function PriceBlock({ mrpPaise, pricePaise, size = "md", showTaxNote = true, prefix, className }: PriceBlockProps) {
   const pct = discountPct(mrpPaise, pricePaise);
   const hasSaving = pct > 0;
 
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
-      <div className="flex flex-wrap items-baseline gap-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        {prefix && <span className="text-sm text-ink-2">{prefix}</span>}
         <span
           className={cn(
             "tabular-nums font-sans font-semibold text-ink",

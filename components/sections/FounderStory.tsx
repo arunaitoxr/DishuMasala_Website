@@ -1,47 +1,49 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { HOME_COPY } from "@/content/home";
+import { PAGE_CONTAINER, SECTION_SPACING } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 import { SectionHeading } from "./SectionHeading";
 
 /**
- * The founder note — homepage trust device #2, right after TrustStrip's verifiable-facts marquee.
- * Where Blue Tea (the competitor CLAUDE.md §1 names as the reference quality bar) leans on scale —
- * customer counts, a Shark Tank badge — this section leans on the one thing scale can't buy: a real
- * person's name behind the product. It's a quiet editorial pull-quote, not a photo spread.
+ * The founder note. On the homepage it is a short "Our story" block after the products (the
+ * reference site's pattern) — the question the brand began with and its answer, the tagline and the
+ * founder's name — with the full six-paragraph story on /about. It used to run in full above the
+ * first product, which put the first buyable card about three and a half phone screens down.
  *
- * Deliberately NO image. CLAUDE.md §8 and components/media/Placeholder.tsx both rule out a
- * placeholder standing in for "a human face presented as a named person" — that ban exists
- * specifically to stop a stand-in image accidentally shipping as if it were the real founder, which
- * is exactly the failure mode a "founder photo" slot invites. So this section is built to read as
- * complete with text alone; once a real portrait exists, add it deliberately as an actual
- * next/image (never through Placeholder.tsx), e.g.:
- *
- *   <Image src="<supabase storage url>" alt="Harish Sachdeva, founder of Dishu Masala"
- *          width={480} height={600} className="rounded-lg" />
- *
- * — placed beside this text in a two-column layout at that point, not before.
+ * Deliberately no photo: CLAUDE.md §8 rules out a placeholder standing in for a named person. Once a
+ * real portrait exists, add it as a next/image beside this text, never through Placeholder.tsx.
  */
 export function FounderStory() {
   const copy = HOME_COPY.founderStory;
+  const excerpt = copy.homepageExcerpt.map((i) => copy.body[i]);
 
   return (
-    <section aria-labelledby="founder-heading" className="bg-surface-2 py-12 sm:py-14 lg:py-16">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <div aria-hidden="true" className="mb-6 h-px w-12 bg-gold" />
-        <SectionHeading
-          id="founder-heading"
-          eyebrow={copy.eyebrow}
-          heading={copy.heading}
-          body={copy.body}
-          accentClassName="text-ink-2"
-        />
-        {"tagline" in copy && copy.tagline && (
-          <p className="mt-8 border-l-2 border-gold pl-4 font-display text-base font-semibold italic text-ink sm:text-lg">
-            {copy.tagline}
-          </p>
-        )}
-        {"signOff" in copy && copy.signOff && (
-          <p className="mt-6 text-sm font-semibold uppercase tracking-[0.08em] text-ink-2">— {copy.signOff}, Founder</p>
-        )}
+    <section aria-labelledby="founder-heading" className="bg-surface-2">
+      <div className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
+        <div className="max-w-3xl">
+          <SectionHeading id="founder-heading" eyebrow={copy.eyebrow} heading={copy.heading} body={excerpt} accentClassName="text-ink-2" />
+          <FounderSignature />
+          <div className="mt-8">
+            <Button asChild variant="outline" size="md">
+              <Link href="/about/">Read our story</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+/** Tagline pull-quote plus the founder's name — shared by the homepage block and /about. */
+export function FounderSignature() {
+  const copy = HOME_COPY.founderStory;
+  return (
+    <>
+      <p className="mt-8 max-w-2xl border-l-2 border-gold pl-4 font-display text-base font-semibold italic text-ink sm:text-lg">
+        {copy.tagline}
+      </p>
+      <p className="mt-4 text-sm font-semibold text-ink-2">{copy.signOff}, Founder</p>
+    </>
   );
 }

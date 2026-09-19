@@ -5,6 +5,10 @@ import { SortSelect } from "@/components/shop/SortSelect";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { PaginationLinks } from "@/components/ui/PaginationLinks";
 import { Placeholder } from "@/components/media/Placeholder";
+import { PageHero } from "@/components/sections/PageHero";
+import { Button } from "@/components/ui/Button";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 import { getShopFacets, getShopPage } from "@/lib/db/queries/shop";
 import { parseShopSearchParams, shopFiltersToSearchParams, type ShopFilters } from "@/lib/db/queries/shop-query";
 
@@ -20,9 +24,9 @@ function buildShopUrl(filters: ShopFilters, overrides: Record<string, string> = 
   return qs ? `/shop/?${qs}` : "/shop/";
 }
 
-function describeFilters(filters: ShopFilters): string {
+function describeFilters(filters: ShopFilters, collectionTitle?: string): string {
   const parts: string[] = [];
-  if (filters.collection) parts.push(filters.collection.replace(/-/g, " "));
+  if (filters.collection) parts.push(collectionTitle ?? filters.collection.replace(/-/g, " "));
   if (filters.optionLabel) parts.push(filters.optionLabel.toLowerCase());
   if (filters.inStockOnly) parts.push("in stock");
   if (filters.priceMinRupees != null || filters.priceMaxRupees != null) parts.push("filtered by price");
@@ -64,24 +68,30 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     filters.priceMinRupees != null || filters.priceMaxRupees != null ? true : undefined,
   ].filter(Boolean).length;
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
-      <header className="mb-8 flex flex-col gap-2 sm:mb-10">
-        <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">Shop</h1>
-        <p className="max-w-xl text-ink-2">
-          {page.totalCount} product{page.totalCount === 1 ? "" : "s"}
-          {describeFilters(filters) ? ` — ${describeFilters(filters)}` : ""}
-        </p>
-      </header>
+  const described = describeFilters(filters, facets.collections.find((c) => c.slug === filters.collection)?.title);
 
+  return (
+    <>
+      {/* The same hero as the collection pages and Corporate Gifting — "All products" sits in the nav
+          beside the collections, so it opens the same way they do. Titled to match the nav label. */}
+      <PageHero
+        ariaLabel="All products"
+        eyebrow="Tea & masala"
+        heading="All products"
+        subhead="Every Dishu herbal tea, black tea, spice and combo in one place."
+        image={null}
+        bandClassName="bg-brew-1"
+      />
+    <div className={cn(PAGE_CONTAINER, "py-10 lg:py-14")}>
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
         <FilterRail filters={filters} facets={facets} action="/shop/" />
 
         <div className="min-w-0 flex-1">
           <div className="mb-6 flex items-center justify-between gap-3 border-y border-line py-3 sm:mb-7">
             <FilterSheet filters={filters} facets={facets} action="/shop/" activeCount={activeFilterCount} />
-            <p className="hidden text-sm text-ink-2 sm:block">
-              Showing <span className="font-semibold tabular-nums text-ink">{page.products.length}</span> on this page
+            <p className="text-sm text-ink-2">
+              <span className="font-semibold tabular-nums text-ink">{page.totalCount}</span> product{page.totalCount === 1 ? "" : "s"}
+              {described ? ` — ${described}` : ""}
             </p>
             <SortSelect filters={filters} action="/shop/" className="ml-auto" />
           </div>
@@ -93,9 +103,9 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                 No products match these filters. Try widening the price range, clearing the type filter,
                 or removing the collection filter.
               </p>
-              <a href="/shop/" className="text-sm font-semibold text-brew-2 underline underline-offset-4">
-                Clear all filters
-              </a>
+              <Button asChild variant="outline" size="md">
+                <a href="/shop/">Clear all filters</a>
+              </Button>
             </div>
           ) : (
             <>
@@ -111,5 +121,6 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -37,3 +37,20 @@ export const TEA_BENEFIT_STRIP: readonly CollectionBenefit[] = [
  * it on exactly the two pages they named, delete the third entry.
  */
 export const COLLECTIONS_WITH_BENEFIT_STRIP = new Set(["blue-tea", "red-tea", "tea-combos"]);
+
+/**
+ * The homepage's benefit strip, directly under the hero banner — the same strip, in the same quiet
+ * style, as the one on the herbal-tea collection pages (one treatment for one kind of content).
+ *
+ * One deliberate difference: the homepage speaks for the whole range, and the Black Teas (Classic
+ * Tea, Premium Assam Tea) do contain caffeine — client confirmed 2026-09-20. So the homepage says
+ * which teas are caffeine-free instead of a site-wide "Zero Caffeine", which would be false for two
+ * products on the same page.
+ */
+export const HOME_BENEFIT_STRIP: readonly CollectionBenefit[] = [
+  { label: "No preservatives" },
+  { label: "Plant-Based Teabags" },
+  { label: "Caffeine-free herbal teas" },
+  { label: "Farm-fresh Quality" },
+  { label: "All Natural" },
+] as const;

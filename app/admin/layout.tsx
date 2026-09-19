@@ -95,9 +95,9 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </div>
         </div>
       </aside>
-      <main id="admin-main" className="min-w-0 flex-1 px-6 py-8 [font-variant-numeric:tabular-nums] sm:px-8">
+      <div id="admin-main" className="min-w-0 flex-1 px-6 py-8 [font-variant-numeric:tabular-nums] sm:px-8">
         {children}
-      </main>
+      </div>
     </div>
   );
 }

@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { Rating } from "@/components/ui/Rating";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeading } from "@/components/sections/SectionHeading";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { Pagination } from "@/components/ui/Pagination";
 import { cn } from "@/lib/cn";
+import { PAGE_CONTAINER, SECTION_SPACING } from "@/lib/design-tokens";
 import { getHomepageReviewsPageAction, type HomepageReviewsPageResult } from "@/lib/actions/reviews";
 
 /**
@@ -33,7 +35,7 @@ function HomepageReviewCard({ review, compact = false }: { review: HomepageRevie
       className={
         compact
           ? "border-b border-line py-5 last:border-b-0"
-          : "flex w-[82%] shrink-0 snap-start flex-col gap-3 rounded-lg border border-line bg-surface p-5 shadow-card sm:w-auto"
+          : "flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-5 shadow-card"
       }
     >
       <div className="flex items-center gap-2">
@@ -41,7 +43,7 @@ function HomepageReviewCard({ review, compact = false }: { review: HomepageRevie
         {review.verifiedBuyer && <Badge tone="ok">Verified buyer</Badge>}
       </div>
       {review.title && <p className="font-display text-lg font-semibold leading-snug text-ink">{review.title}</p>}
-      <p className={cn("text-align-normal text-sm leading-relaxed text-ink-2", compact ? "" : "line-clamp-5")}>
+      <p className={cn("text-sm leading-relaxed text-ink-2", compact ? "" : "line-clamp-5")}>
         {review.body}
       </p>
       <div className="mt-auto pt-2 text-sm">
@@ -69,10 +71,7 @@ export function HomepageReviews({ initialPage }: { initialPage: HomepageReviewsP
   if (initialPage.items.length === 0) return null;
 
   return (
-    <section
-      aria-labelledby="homepage-reviews-heading"
-      className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:py-16"
-    >
+    <section aria-labelledby="homepage-reviews-heading" className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
       <SectionHeading
         id="homepage-reviews-heading"
         eyebrow="In their words"
@@ -87,20 +86,18 @@ export function HomepageReviews({ initialPage }: { initialPage: HomepageReviewsP
         role="list"
       >
         {initialPage.items.map((review) => (
-          <li key={review.id}>
+          // Width lives on the <li> — it is the flex item. On the <article> inside it, the phone
+          // carousel's cards shrank to ~80px wide, one word per line.
+          <li key={review.id} className="w-[82%] shrink-0 snap-start sm:w-auto">
             <HomepageReviewCard review={review} />
           </li>
         ))}
       </ul>
 
       {initialPage.total > initialPage.pageSize && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mt-6 h-10 rounded-md border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
-        >
+        <Button type="button" variant="outline" size="md" className="mt-8" onClick={() => setOpen(true)}>
           View more reviews ({initialPage.total})
-        </button>
+        </Button>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>

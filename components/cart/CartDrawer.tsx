@@ -95,7 +95,7 @@ export function CartDrawer({ upsells }: { upsells: ReactNode }) {
             <div className="shrink-0 border-t border-line/70 px-5 py-4">
               <OrderSummary pricing={pricing} />
               <Button asChild variant="gradient" size="lg" onClick={close} className="mt-4 w-full">
-                <Link href="/checkout/">Proceed to checkout →</Link>
+                <Link href="/checkout/">Proceed to checkout</Link>
               </Button>
               <Link
                 href="/cart/"

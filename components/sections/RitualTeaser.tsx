@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/Button";
 import { RitualVideo } from "./RitualVideo";
 import { SectionHeading } from "./SectionHeading";
 import { HOME_COPY } from "@/content/home";
+import { PAGE_CONTAINER, SECTION_SPACING } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 /** The brew + lemon ritual teaser — story and SEO (the full recipe is real seeded content in Phase
  * 8; this section links to it ahead of time). No health or medicinal claims, only the brewing
@@ -11,7 +13,7 @@ export function RitualTeaser() {
   const copy = HOME_COPY.ritual;
 
   return (
-    <section aria-labelledby="ritual-heading" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:py-16">
+    <section aria-labelledby="ritual-heading" className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
       <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16">
         <div className="flex flex-col gap-6">
           <SectionHeading

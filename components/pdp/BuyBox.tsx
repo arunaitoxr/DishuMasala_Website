@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PriceBlock } from "@/components/ui/PriceBlock";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { Button } from "@/components/ui/Button";
@@ -97,6 +97,10 @@ export function BuyBox({
   const { wishlisted, toggle: toggleWishlist } = useWishlistToggle(productId);
   const [justAdded, setJustAdded] = useState(false);
   const groupName = useId();
+  const packRailRef = useRef<HTMLDivElement>(null);
+  const packCardRefs = useRef<(HTMLLabelElement | null)[]>([]);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
 
   const selected = useMemo(
     () => variants.find((v) => v.id === variantId) ?? variants[0],
@@ -140,6 +144,42 @@ export function BuyBox({
     return () => clearTimeout(timer);
   }, [justAdded]);
 
+  // Pack rail: one row that scrolls sideways (client request, 2026-09-20 — the cards used to wrap
+  // onto a second and third row on products with five or six packs). Arrows show only when there is
+  // more in that direction.
+  const updatePackRail = () => {
+    const rail = packRailRef.current;
+    if (!rail) return;
+    setCanScrollPrev(rail.scrollLeft > 4);
+    setCanScrollNext(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4);
+  };
+  useEffect(() => {
+    updatePackRail();
+    const rail = packRailRef.current;
+    if (!rail) return;
+    const observer = new ResizeObserver(updatePackRail);
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [variants.length]);
+
+  // Keep the chosen pack in view when it changes by keyboard (arrow keys move through the radios).
+  const selectedIndex = variants.findIndex((v) => v.id === selected?.id);
+  useEffect(() => {
+    const rail = packRailRef.current;
+    const card = packCardRefs.current[selectedIndex];
+    if (!rail || !card) return;
+    const left = card.offsetLeft - rail.offsetLeft;
+    const right = left + card.offsetWidth;
+    if (left < rail.scrollLeft) rail.scrollTo({ left: left - 4, behavior: "smooth" });
+    else if (right > rail.scrollLeft + rail.clientWidth) rail.scrollTo({ left: right - rail.clientWidth + 4, behavior: "smooth" });
+  }, [selectedIndex]);
+
+  const scrollPackRail = (direction: 1 | -1) => {
+    const rail = packRailRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: direction * rail.clientWidth * 0.75, behavior: "smooth" });
+  };
+
   if (!selected) return null;
 
   return (
@@ -170,14 +210,26 @@ export function BuyBox({
       </div>
 
       {variants.length > 1 && (
-        <fieldset>
+        // `min-w-0`: a <fieldset> defaults to `min-inline-size: min-content`, so without it the
+        // one-row pack rail below stretches the fieldset (and the page) to its full content width
+        // instead of scrolling — the phone page grew to 656px wide.
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink">{optionLabel}</legend>
           {/* Tall rectangular cards (client request, 2026-09-17), not pills: selected uses the
            * brand's citrus/gold yellow with dark ink text — never white on citrus, which fails
            * contrast outright (CLAUDE.md §5.6's hard floor). The real "best value" tier (computed
            * above, never a fixed/guessed one) gets a continuously running gold border. */}
-          <div role="radiogroup" aria-label={optionLabel} className="flex flex-wrap gap-3">
-            {variants.map((v) => {
+          {/* `pt-3` keeps the "Best Value" badge (which sits across a card's top edge) inside the
+              scroll area, which would otherwise clip it; `pb-2`/`px-1` do the same for focus rings. */}
+          <div className="relative -mx-1">
+          <div
+            ref={packRailRef}
+            role="radiogroup"
+            aria-label={optionLabel}
+            onScroll={updatePackRail}
+            className="flex snap-x gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 pt-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {variants.map((v, i) => {
               const checked = v.id === selected.id;
               const isBestValue = v.id === bestValueVariantId;
               // A variant with its own real pack photo (e.g. Blue Tea loose's 2-pack/4-pack)
@@ -188,8 +240,13 @@ export function BuyBox({
               return (
                 <label
                   key={v.id}
+                  ref={(el) => {
+                    packCardRefs.current[i] = el;
+                  }}
                   className={cn(
-                    "relative flex w-24 cursor-pointer flex-col items-center overflow-hidden rounded-md border-2 text-center transition-colors duration-[180ms] sm:w-28",
+                    // No overflow-hidden here: it clipped the "Best Value" badge that sits across
+                    // the top edge. The image clips its own corners instead (below).
+                    "relative flex w-24 shrink-0 snap-start cursor-pointer flex-col items-center rounded-md border-2 text-center transition-colors duration-[180ms] sm:w-28",
                     "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brew-2 has-[:focus-visible]:ring-offset-2",
                     !v.inStock && "opacity-50",
                     checked ? "border-citrus bg-citrus text-ink" : "border-line bg-surface text-ink-2 hover:border-ink-3",
@@ -217,12 +274,14 @@ export function BuyBox({
                     </span>
                   )}
                   {cardImageUrl && (
-                    <img
-                      src={cardImageUrl}
-                      alt=""
-                      aria-hidden="true"
-                      className="h-20 w-full object-cover sm:h-24"
-                    />
+                    <span className="block w-full overflow-hidden rounded-t-[10px]">
+                      <img
+                        src={cardImageUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-20 w-full object-cover sm:h-24"
+                      />
+                    </span>
                   )}
                   <span className="flex flex-col items-center gap-1 px-2 py-2">
                     <span className="text-sm font-semibold leading-tight text-ink">{v.optionValue}</span>
@@ -231,6 +290,9 @@ export function BuyBox({
                 </label>
               );
             })}
+          </div>
+          <PackRailButton direction="prev" visible={canScrollPrev} onClick={() => scrollPackRail(-1)} />
+          <PackRailButton direction="next" visible={canScrollNext} onClick={() => scrollPackRail(1)} />
           </div>
         </fieldset>
       )}
@@ -294,6 +356,37 @@ export function BuyBox({
       <span className="sr-only" data-testid="add-to-cart-payload" aria-hidden="true">
         {JSON.stringify(payload)}
       </span>
+    </div>
+  );
+}
+
+/** Left/right control over the edge of the pack rail, fading the cards beneath it. Hidden (and out
+ * of the tab order) when the rail can't scroll that way — keyboard users move through the packs with
+ * the radio group's own arrow keys. */
+function PackRailButton({ direction, visible, onClick }: { direction: "prev" | "next"; visible: boolean; onClick: () => void }) {
+  const prev = direction === "prev";
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-y-0 flex items-center transition-opacity duration-[180ms]",
+        prev ? "left-0 bg-linear-to-r from-bg via-bg/80 to-transparent pr-6" : "right-0 bg-linear-to-l from-bg via-bg/80 to-transparent pl-6",
+        visible ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        tabIndex={-1}
+        aria-hidden="true"
+        className={cn(
+          "flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card hover:bg-surface-2",
+          visible && "pointer-events-auto",
+        )}
+      >
+        <svg viewBox="0 0 20 20" fill="none" className={cn("size-4", !prev && "rotate-180")} aria-hidden="true">
+          <path d="M12.5 15 7.5 10l5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }

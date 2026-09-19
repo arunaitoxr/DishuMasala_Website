@@ -205,7 +205,7 @@ export function PhoneCapturePopup() {
               </label>
               {error && <p role="alert" className="text-sm text-crit">{error}</p>}
               <Button type="submit" variant="gradient" className="w-full" loading={submitting} disabled={!phoneValid || !consent}>
-                Claim my 10% off →
+                Claim my 10% off
               </Button>
             </form>
             <div className="mt-4 flex items-center justify-center gap-4 border-t border-line pt-3 text-xs text-ink-2">

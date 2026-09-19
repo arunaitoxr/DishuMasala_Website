@@ -15,7 +15,7 @@ const RED_TEA = "/product/premium-herbal-red-tea-loose";
 test("anonymous cart + wishlist merge into the account on login", async ({ page, request }) => {
   // ---- Populate anonymous cart + wishlist -------------------------------------------------
   await page.goto(BLUE_TEA);
-  await page.getByRole("button", { name: "Add to cart" }).click();
+  await page.locator("#pdp-buy-box").getByRole("button", { name: "Add to cart" }).click();
   await expect(page.getByRole("heading", { name: /your cart \(1\)/i })).toBeVisible();
   await page.keyboard.press("Escape");
 

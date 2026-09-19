@@ -137,12 +137,6 @@ function IconCountButton({
 // happened — Tea Combos appeared as the first item, ahead of Blue Tea.
 const NAV_ORDER = ["blue-tea", "spices", "red-tea", "combos", "tea-combos", "classic-teas"];
 
-/** The collection's persisted title remains "Classic & Assam" for existing URLs, SEO and catalog
- * data; only its shopper-facing navigation label changes to the clearer category name. */
-function navLabel(slug: string, title: string): string {
-  return slug === "classic-teas" ? "Black Tea" : title;
-}
-
 export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: HeaderClientProps) {
   const pathname = usePathname();
   // Flat list for the always-visible desktop nav, sorted to NAV_ORDER — see the comment at its
@@ -278,7 +272,7 @@ export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: Head
               column layout. */}
           {/* `flex-nowrap` + per-link `whitespace-nowrap` (2026-09-17): adding the sixth collection
               (Tea Combos) took this row to nine items and it began wrapping onto a second line —
-              every multi-word label ("Classic & Assam", "Corporate Gifting") broke mid-label. The
+              every multi-word label ("Spice Combos", "Corporate Gifting") broke mid-label. The
               row fits at 1440px once labels are kept intact and the `lg` padding is tightened. */}
           <nav aria-label="Collections" className="ml-2 hidden min-w-0 flex-nowrap items-center gap-0.5 lg:flex">
             {flatCollectionLinks.map((item) => {
@@ -293,7 +287,7 @@ export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: Head
                     isActive ? "text-brew-2" : "text-ink hover:bg-surface-2",
                   )}
                 >
-                  {navLabel(item.slug, item.title)}
+                  {item.title}
                   {isActive && (
                     <span aria-hidden="true" className="absolute inset-x-4 -bottom-0.5 h-[2px] rounded-full bg-brew-2" />
                   )}
@@ -387,7 +381,7 @@ export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: Head
                           href={`/collections/${item.slug}/`}
                           className="flex items-center gap-2 py-1.5 text-[0.95rem] font-medium text-ink-2"
                         >
-                          {navLabel(item.slug, item.title)}
+                          {item.title}
                         </Link>
                       </DrawerClose>
                     </li>

@@ -6,7 +6,7 @@ const RED_TEA = "/product/premium-herbal-red-tea-loose";
 
 test("browse → add to cart → checkout → Cash on Delivery → confirmation", async ({ page }) => {
   await page.goto(RED_TEA);
-  await page.getByRole("button", { name: "Add to cart" }).click();
+  await page.locator("#pdp-buy-box").getByRole("button", { name: "Add to cart" }).click();
   await expect(page.getByRole("heading", { name: /your cart \(/i })).toBeVisible();
 
   await page.getByRole("link", { name: "Checkout" }).click();

@@ -7,6 +7,8 @@ import blackTeaDesktop from "@/data/CategoryBanners/BannerBlackTeaWeb.png";
 import blackTeaMobile from "@/data/CategoryBanners/BannerBlackTeaMobile.png";
 import spicesDesktop from "@/data/CategoryBanners/BannerSpiceComboWeb.png";
 import spicesMobile from "@/data/CategoryBanners/BannerSpicesComboMobile.png";
+import teaCombosDesktop from "@/data/CategoryBanners/TeaComboWeb.png";
+import teaCombosMobile from "@/data/CategoryBanners/TeaComboMobile.png";
 
 /**
  * The exact client-supplied category art. The Spice Combo creative is intentionally shared by
@@ -40,6 +42,11 @@ export const CATEGORY_BANNER_ASSETS: Partial<Record<string, CategoryBannerAsset>
     desktop: blackTeaDesktop,
     mobile: blackTeaMobile,
     alt: "Dishu Masala Black Tea range",
+  },
+  "tea-combos": {
+    desktop: teaCombosDesktop,
+    mobile: teaCombosMobile,
+    alt: "Dishu Masala Premium Herbal Blue Tea and Red Tea packs side by side",
   },
   spices: SPICES,
   combos: SPICES,

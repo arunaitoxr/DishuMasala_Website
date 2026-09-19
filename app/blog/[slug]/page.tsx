@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { getPublishedPostBySlug, getRelatedProductsForPost } from "@/lib/db/queries/posts";
 import { TiptapRenderer } from "@/components/content/TiptapRenderer";
 import { readingTimeMinutes } from "@/lib/content/tiptap-schema";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -42,7 +44,8 @@ export default async function BlogPostPage({ params }: PageProps) {
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className={cn(PAGE_CONTAINER, "py-12 lg:py-16")}>
+      <article className="max-w-3xl">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Link href="/blog" className="text-sm text-ink-2 underline underline-offset-4">← Blog</Link>
 
@@ -52,7 +55,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         </div>
       )}
 
-      <h1 className="mt-6 font-display text-3xl font-semibold text-ink sm:text-4xl">{post.title}</h1>
+      <h1 className="mt-6 type-page-title text-ink">{post.title}</h1>
       <p className="mt-2 text-sm text-ink-3">
         {post.author && <>By {post.author} · </>}
         {post.publishedAt.toLocaleDateString("en-IN", { dateStyle: "medium" })} · ~{minutes} min read
@@ -81,6 +84,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           </ul>
         </section>
       )}
-    </main>
+      </article>
+    </div>
   );
 }

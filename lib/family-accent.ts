@@ -75,7 +75,7 @@ export function resolveCollectionAccent(collectionSlug: string): FamilyAccentTok
       return "brew-2";
     case "red-tea":
       return "hibiscus";
-    case "blue-tea-red-tea-combo":
+    case "tea-combos":
       return "brew-3";
     case "classic-teas":
       return "leaf";

@@ -18,7 +18,7 @@ export const TEA_COLLECTION_SLUGS = new Set(["blue-tea", "red-tea", "classic-tea
 export const MASALA_COLLECTION_SLUGS = new Set(["spices", "combos"]);
 
 /** Collections that get the small Lemon Shift gradient tile in the mega-menu (CLAUDE.md §5.4:
- * "Blue Tea and Red Tea collection tiles" — Classic & Assam does not). */
+ * "Blue Tea and Red Tea collection tiles" — Black Tea does not). */
 export const GRADIENT_TILE_SLUGS = new Set(["blue-tea", "red-tea"]);
 
 export interface MegaMenuColumn {

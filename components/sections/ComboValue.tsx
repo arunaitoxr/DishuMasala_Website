@@ -1,5 +1,9 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
 import { SectionHeading } from "./SectionHeading";
+import { PAGE_CONTAINER, SECTION_SPACING } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 import { computeComboSavingPaise } from "@/lib/combo-savings";
 import { formatINR } from "@/lib/money";
 import { HOME_COPY } from "@/content/home";
@@ -34,16 +38,21 @@ export function ComboValue({ combos, spices }: ComboValueProps) {
   }
 
   return (
-    <section aria-labelledby="combos-heading" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:py-16">
-      <SectionHeading
-        id="combos-heading"
-        eyebrow={HOME_COPY.combos.eyebrow}
-        heading={HOME_COPY.combos.heading}
-        body={HOME_COPY.combos.body}
-        accentClassName="text-ink-2"
-      />
-      <div className="mt-10">
-        <ProductCarousel products={combos} label="Combo Packs" badgeBySlug={badgeBySlug} />
+    <section aria-labelledby="combos-heading" className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <SectionHeading
+          id="combos-heading"
+          eyebrow={HOME_COPY.combos.eyebrow}
+          heading={HOME_COPY.combos.heading}
+          body={HOME_COPY.combos.body}
+          accentClassName="text-chilli"
+        />
+        <Button asChild variant="outline" size="md" className="shrink-0 self-start lg:self-end">
+          <Link href={HOME_COPY.combos.ctaHref}>{HOME_COPY.combos.ctaLabel}</Link>
+        </Button>
+      </div>
+      <div className="mt-8">
+        <ProductCarousel products={combos} label="Spice Combos" badgeBySlug={badgeBySlug} />
       </div>
     </section>
   );

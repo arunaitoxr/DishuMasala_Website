@@ -66,3 +66,12 @@ export const SECTION_SPACING = {
 } as const;
 
 export type SectionSpacingName = keyof typeof SECTION_SPACING;
+
+/**
+ * The one page container — every storefront page and section aligns its content to the header's
+ * edge (logo on the left, icons on the right). Before this, the cart, blog and recipes used
+ * `max-w-5xl` and contact `max-w-6xl`, so the page's left edge jumped as you moved between pages.
+ * Narrower reading measures (a form, an article) sit *inside* this container, left-aligned to it,
+ * rather than re-centring on a narrower one.
+ */
+export const PAGE_CONTAINER = "mx-auto w-full max-w-7xl px-4 sm:px-6";

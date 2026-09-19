@@ -11,7 +11,7 @@ const RED_TEA = "/product/premium-herbal-red-tea-loose";
 
 test("an invalid field shows an accessible, programmatically-associated error", async ({ page }) => {
   await page.goto(RED_TEA);
-  await page.getByRole("button", { name: "Add to cart" }).click();
+  await page.locator("#pdp-buy-box").getByRole("button", { name: "Add to cart" }).click();
   await page.getByRole("link", { name: "Checkout" }).click();
   await expect(page).toHaveURL(/\/checkout\/?$/);
 
@@ -30,7 +30,7 @@ test("an invalid field shows an accessible, programmatically-associated error", 
 test("checkout is completable start to finish using only the keyboard (Tab / Space / Enter)", async ({ page }) => {
   await page.goto(RED_TEA);
   // Add to cart is itself keyboard-reachable — Tab to it and press Enter/Space rather than click.
-  await page.getByRole("button", { name: "Add to cart" }).focus();
+  await page.locator("#pdp-buy-box").getByRole("button", { name: "Add to cart" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: /your cart \(/i })).toBeVisible();
 

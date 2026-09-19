@@ -214,7 +214,8 @@ export async function getHomepageReviewsPage(page = 1): Promise<HomepageReviewsP
 }
 
 async function fetchHomepageReviewsPage(page: number): Promise<HomepageReviewsPage> {
-  const pageSize = 5;
+  // Six, not five: the rail is a 3-up grid from `lg`, and five left an empty slot in its second row.
+  const pageSize = 6;
   const where = and(eq(reviews.status, "approved"), eq(products.status, "published"));
   const [rows, [{ total }]] = await Promise.all([
     db

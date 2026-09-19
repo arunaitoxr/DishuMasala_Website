@@ -83,25 +83,21 @@ export function GiftPackCarousel({ packs }: { packs: GiftPackCardData[] }) {
           <li
             key={pack.slug}
             data-carousel-item
-            className="flex w-[78%] shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card sm:w-72"
+            className="flex w-[46%] shrink-0 snap-start flex-col overflow-hidden rounded-lg bg-surface shadow-card sm:w-64"
           >
-            <div className="relative w-full bg-surface-2" style={{ aspectRatio: "4 / 5" }}>
+            {/* Square, like every product card: the pack photos are square and carry their own
+                text, which a 4:5 crop cut off at both edges. */}
+            <div className="relative w-full bg-surface-2" style={{ aspectRatio: "1 / 1" }}>
               {pack.image ? (
                 <Image src={pack.image.url} alt={pack.image.alt} fill sizes="(min-width: 640px) 288px, 78vw" className="object-cover" />
               ) : (
                 <Placeholder slot="product-packshot-generic" className="h-full w-full rounded-none" />
               )}
             </div>
-            <div className="flex flex-1 flex-col gap-2 p-4">
-              <h3 className="font-display text-base font-semibold text-ink">{pack.name}</h3>
+            <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
+              <h3 className="font-sans text-[0.95rem] font-semibold leading-snug tracking-[-0.01em] text-ink sm:text-[1.05rem]">{pack.name}</h3>
               <p className="flex-1 text-sm leading-relaxed text-ink-2">{pack.description}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-1 self-start"
-                onClick={() => enquireAbout(pack)}
-              >
+              <Button type="button" variant="gradient" size="sm" className="mt-2 w-full" onClick={() => enquireAbout(pack)}>
                 Enquire
               </Button>
             </div>

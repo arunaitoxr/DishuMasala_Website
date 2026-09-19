@@ -2,29 +2,31 @@ import { cn } from "@/lib/cn";
 
 export interface SectionHeadingProps {
   id: string;
-  eyebrow: string;
+  /** Short label above the title. Optional — a title that already names its subject ("Frequently
+   * asked questions", "Reviews") doesn't need one repeating it. */
+  eyebrow?: string;
   heading: string;
   /** A single paragraph, or an array rendered as separate paragraphs (client-requested line
-   * breaks — e.g. Red Tea's "Bright • Floral • Mildly Tart • Caffeine-Free" reading as its own
-   * line rather than folded into the surrounding sentence). */
+   * breaks — e.g. Red Tea's "Bright • Floral • Mildly Tart • Caffeine-Free" on its own line). */
   body?: string | readonly string[];
-  /** Eyebrow colour — a token utility class (e.g. "text-brew-2", "text-hibiscus"). Never a hex
-   * literal at the call site. Must clear 4.5:1 on white/ivory at this text's size (CLAUDE.md §5.6):
-   * brew-2, hibiscus, leaf, chilli, pepper, ink and ink-2 all do; turmeric, coriander and gold do
-   * not (they were designed as dot/chip/background accents, not small text) — use ink-2 for any
-   * section without one clean, high-contrast family colour of its own. */
+  /** Eyebrow colour — a token utility class (e.g. "text-brew-2", "text-hibiscus"). Must clear 4.5:1
+   * on ivory at this size (CLAUDE.md §5.6): brew-2, hibiscus, leaf, chilli, pepper, ink and ink-2 do;
+   * turmeric, coriander and gold do not. */
   accentClassName?: string;
   align?: "left" | "center";
   className?: string;
-  /** "dark" (default) is ink text for a light/ivory background. "light" is white text for a
-   * saturated colour background (e.g. Red Tea's scroll-shifted band) — overrides accentClassName
-   * with a white-on-colour-safe eyebrow tone, since a family-accent colour like "text-hibiscus"
-   * would be invisible against its own background. */
+  /** "dark" (default) is ink text on ivory. "light" is white text on a saturated colour band. */
   tone?: "dark" | "light";
+  /** The page's own title uses `h1` (and the page-title size); every section below it is `h2`. */
+  as?: "h1" | "h2";
 }
 
-/** Shared eyebrow + Fraunces heading + optional body copy block, used by every homepage section
- * below the hero so the type scale (CLAUDE.md §5.3) stays identical across the page. */
+/**
+ * The one heading block every section on the storefront uses — homepage bands, collection pages,
+ * the product page's lower sections, gifting, FAQ, reviews — so the type scale (CLAUDE.md §5.3)
+ * stays identical everywhere instead of each component re-typing its own clamp() (they had drifted
+ * to 18px, 30px and 43px section titles on the same site).
+ */
 export function SectionHeading({
   id,
   eyebrow,
@@ -34,26 +36,28 @@ export function SectionHeading({
   align = "left",
   className,
   tone = "dark",
+  as: Tag = "h2",
 }: SectionHeadingProps) {
   const isLight = tone === "light";
+  const paragraphs = body == null ? [] : Array.isArray(body) ? body : [body];
   return (
     <div className={cn("flex flex-col gap-3", align === "center" && "items-center text-center", className)}>
-      <p className={cn("text-xs font-semibold uppercase tracking-[0.14em]", isLight ? "text-white/80" : accentClassName)}>
-        {eyebrow}
-      </p>
-      <h2
+      {eyebrow && <p className={cn("type-eyebrow", isLight ? "text-white/80" : accentClassName)}>{eyebrow}</p>}
+      <Tag
         id={id}
-        className={cn("font-display font-semibold", isLight ? "text-white" : "text-ink")}
-        style={{ fontSize: "clamp(1.75rem, 3vw, 2.75rem)", letterSpacing: "-0.015em", lineHeight: 1.1 }}
+        className={cn(Tag === "h1" ? "type-page-title" : "type-section-title", isLight ? "text-white" : "text-ink")}
       >
         {heading}
-      </h2>
-      {body &&
-        (Array.isArray(body) ? body : [body]).map((paragraph, i) => (
-          <p key={i} className={cn("max-w-2xl text-base leading-relaxed", isLight ? "text-white/90" : "text-ink-2")}>
-            {paragraph}
-          </p>
-        ))}
+      </Tag>
+      {paragraphs.length > 0 && (
+        <div className={cn("flex max-w-2xl flex-col gap-3", align === "left" && "copy-justify")}>
+          {paragraphs.map((paragraph, i) => (
+            <p key={i} className={cn("text-base leading-relaxed", isLight ? "text-white/90" : "text-ink-2")}>
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

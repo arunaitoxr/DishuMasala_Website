@@ -28,7 +28,7 @@ export function EmptyCart({ compact = false, bestsellers }: { compact?: boolean;
         </p>
       </div>
       <Button asChild variant="gradient" size="md">
-        <Link href="/collections/blue-tea/">Shop Blue Tea →</Link>
+        <Link href="/collections/blue-tea/">Shop Blue Tea</Link>
       </Button>
       <Link href="/shop/" className="text-sm font-medium text-ink-2 underline underline-offset-4 hover:text-ink">
         Or browse everything

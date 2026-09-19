@@ -44,7 +44,14 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
   const [zoomOpen, setZoomOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
-  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // One ref list per rail: they used to share one array, so the desktop rail's "keep the active
+  // thumbnail in view" effect was aiming at the (hidden) mobile rail's buttons.
+  const railRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const railThumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const stripThumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
   const hasReal = slides.length > 0;
   const count = hasReal ? slides.length : 1;
@@ -53,12 +60,45 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
 
   const goTo = (i: number) => setIndex(((i % count) + count) % count);
 
-  // Keeps the active thumbnail in view as it scrolls with keyboard/swipe navigation — the rail
-  // itself scrolls (see the `overflow-x-auto` wrapper below) rather than pushing the page wider,
-  // so without this the active thumbnail could sit off-screen with no visual cue where it went.
+  // Keeps the active thumbnail in view inside its own rail as the shopper browses with arrows or
+  // swipes. Scrolls the rail itself (never `scrollIntoView`, which can also scroll the page).
   useEffect(() => {
-    thumbRefs.current[index]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    const rail = railRef.current;
+    const railThumb = railThumbRefs.current[index];
+    if (rail && railThumb) {
+      const top = railThumb.offsetTop;
+      const bottom = top + railThumb.offsetHeight;
+      if (top < rail.scrollTop) rail.scrollTo({ top, behavior: "smooth" });
+      else if (bottom > rail.scrollTop + rail.clientHeight) rail.scrollTo({ top: bottom - rail.clientHeight, behavior: "smooth" });
+    }
+    const strip = stripRef.current;
+    const stripThumb = stripThumbRefs.current[index];
+    if (strip && stripThumb) {
+      strip.scrollTo({ left: stripThumb.offsetLeft - (strip.clientWidth - stripThumb.offsetWidth) / 2, behavior: "smooth" });
+    }
   }, [index]);
+
+  // Show the rail's up/down controls only when there is somewhere to scroll in that direction.
+  const updateRailScroll = () => {
+    const rail = railRef.current;
+    if (!rail) return;
+    setCanScrollUp(rail.scrollTop > 4);
+    setCanScrollDown(rail.scrollTop + rail.clientHeight < rail.scrollHeight - 4);
+  };
+  useEffect(() => {
+    updateRailScroll();
+    const rail = railRef.current;
+    if (!rail) return;
+    const observer = new ResizeObserver(updateRailScroll);
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [slides.length]);
+
+  const scrollRail = (direction: 1 | -1) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    rail.scrollBy({ top: direction * rail.clientHeight * 0.75, behavior: "smooth" });
+  };
 
   const openLightbox = () => {
     if (current?.kind === "image") setZoomOpen(true);
@@ -94,7 +134,7 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
       <button
         key={i}
         ref={(el) => {
-          thumbRefs.current[i] = el;
+          (vertical ? railThumbRefs : stripThumbRefs).current[i] = el;
         }}
         type="button"
         role="tab"
@@ -126,11 +166,32 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* Reference layout (blueteaindia.co.in): a vertical thumbnail rail sits to the LEFT of the
-       * large image on desktop, not below it — the thumbnail row below is kept for mobile/tablet,
-       * where a horizontal scroll strip under the image is the usable pattern. Both rails drive the
-       * same `index` state; only one is visible at a given breakpoint. */}
-      <div className="flex flex-row-reverse gap-3">
+      {/* Reference layout (blueteaindia.co.in): a vertical thumbnail rail to the LEFT of the large
+       * image on desktop, a horizontal strip below it on mobile/tablet. Both drive the same `index`.
+       *
+       * The square main image alone sets this block's height; the desktop rail is positioned
+       * against it rather than sitting beside it in a flex row. In a row, a product with 8–9 photos
+       * made the rail ~740px tall, the row stretched to match, and the square photo sat in the
+       * middle of a tall frame with empty bands above and below it. Now the rail fits the image's
+       * height and scrolls, with up/down controls when it overflows. */}
+      <div className={cn("relative", count > 1 && "lg:pl-[88px]")}>
+        {count > 1 && (
+          <div className="absolute inset-y-0 left-0 hidden w-[72px] lg:block">
+            <div
+              ref={railRef}
+              role="tablist"
+              aria-orientation="vertical"
+              aria-label="Product media"
+              onScroll={updateRailScroll}
+              className="flex h-full flex-col gap-2.5 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {Array.from({ length: count }, (_, i) => Thumb(i, true))}
+            </div>
+            <RailButton direction="up" visible={canScrollUp} onClick={() => scrollRail(-1)} />
+            <RailButton direction="down" visible={canScrollDown} onClick={() => scrollRail(1)} />
+          </div>
+        )}
+
         <div
           ref={mainRef}
           role="group"
@@ -142,10 +203,9 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
           onTouchEnd={onTouchEnd}
           onClick={openLightbox}
           className={cn(
-            "relative min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-brew-2 focus-visible:ring-offset-2",
+            "relative aspect-square w-full overflow-hidden rounded-lg bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-brew-2 focus-visible:ring-offset-2",
             current?.kind === "image" && "cursor-zoom-in",
           )}
-          style={{ aspectRatio: "1 / 1" }}
         >
           {current?.kind === "image" ? (
             <Image
@@ -154,6 +214,7 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
               width={current.width}
               height={current.height}
               priority={index === 0}
+              sizes="(min-width: 1024px) 560px, 100vw"
               className="h-full w-full object-contain"
             />
           ) : current?.kind === "video" ? (
@@ -172,20 +233,11 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
             {activeAlt}. {current?.kind === "image" ? "Press Enter to zoom." : "Use the video controls to play."} Arrow keys browse media.
           </span>
         </div>
-
-        {count > 1 && (
-          <div
-            role="tablist"
-            aria-label="Product media"
-            className="hidden max-h-full flex-col gap-2.5 overflow-y-auto pr-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden"
-          >
-            {Array.from({ length: count }, (_, i) => Thumb(i, true))}
-          </div>
-        )}
       </div>
 
       {count > 1 && (
         <div
+          ref={stripRef}
           role="tablist"
           aria-label="Product media"
           className="flex gap-2 overflow-x-auto overscroll-x-contain scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
@@ -206,6 +258,37 @@ export function Gallery({ productName, slides, className }: GalleryProps) {
         }}
         title={activeAlt}
       />
+    </div>
+  );
+}
+
+/** Up/down control over the top or bottom edge of the desktop thumbnail rail, fading the thumbnails
+ * beneath it. Hidden (and out of the tab order) when the rail can't scroll that way. */
+function RailButton({ direction, visible, onClick }: { direction: "up" | "down"; visible: boolean; onClick: () => void }) {
+  const up = direction === "up";
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-x-0 flex justify-center transition-opacity duration-[180ms]",
+        up ? "top-0 bg-linear-to-b from-bg via-bg/80 to-transparent pb-5" : "bottom-0 bg-linear-to-t from-bg via-bg/80 to-transparent pt-5",
+        visible ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        tabIndex={visible ? 0 : -1}
+        aria-hidden={!visible || undefined}
+        aria-label={up ? "Scroll thumbnails up" : "Scroll thumbnails down"}
+        className={cn(
+          "flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card hover:bg-surface-2",
+          visible && "pointer-events-auto",
+        )}
+      >
+        <svg viewBox="0 0 20 20" fill="none" className={cn("size-4", !up && "rotate-180")} aria-hidden="true">
+          <path d="M5 12.5 10 7.5l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }

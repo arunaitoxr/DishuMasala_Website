@@ -9,7 +9,7 @@
  */
 
 export const GIFTING_HERO = {
-  eyebrow: "GIFTING · CORPORATE · BULK · FESTIVE",
+  eyebrow: "Corporate & bulk gifting",
   heading: "Gifting that tastes like Punjab, packaged for the occasion.",
   subhead: "Customisable for your brand, occasion or order size.",
   ctaLabel: "Send a bulk enquiry",

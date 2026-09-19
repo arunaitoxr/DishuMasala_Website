@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { VisuallyHidden } from "@/components/ui/VisuallyHidden";
 import { Badge } from "@/components/ui/Badge";
 import { ReviewForm } from "@/components/pdp/ReviewForm";
+import { SectionHeading } from "@/components/sections/SectionHeading";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import type { ReviewSort } from "@/lib/db/queries/reviews";
 import { getReviewsPageAction, type ReviewPageItem, type ReviewsPageResult } from "@/lib/actions/reviews";
@@ -111,9 +113,7 @@ export function Reviews({ productSlug, productName, summary, initialPage }: Revi
 
   return (
     <section id="reviews" aria-labelledby="reviews-heading" className="w-full scroll-mt-24">
-      <h2 id="reviews-heading" className="font-display text-2xl font-semibold text-ink sm:text-3xl">
-        Reviews
-      </h2>
+      <SectionHeading id="reviews-heading" heading="Reviews" />
 
       <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
         <div className="flex flex-col gap-4">
@@ -142,13 +142,9 @@ export function Reviews({ productSlug, productName, summary, initialPage }: Revi
               ))}
 
               {summary.count > PREVIEW_COUNT && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllOpen(true)}
-                  className="mt-4 h-10 rounded-md border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
-                >
+                <Button type="button" variant="outline" size="md" className="mt-6" onClick={() => setShowAllOpen(true)}>
                   View more reviews ({summary.count})
-                </button>
+                </Button>
               )}
             </>
           )}

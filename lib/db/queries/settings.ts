@@ -102,7 +102,10 @@ export async function getStandardShippingPaise(): Promise<Paise> {
   return paise(row.value);
 }
 
-/** GSTIN for the footer's tax note — "TODO" as seeded until the client supplies a real one. */
+/** GSTIN for the footer's tax note. Seeded as the literal "TODO" until the client supplies a real
+ * one — returned as null in that case, so the storefront never prints "GSTIN TODO" to shoppers (it
+ * did, in the footer of every page). The admin settings snapshot keeps showing "TODO" so staff can
+ * still see the value is missing. */
 export async function getGstin(): Promise<string | null> {
   const [row] = await db
     .select({ value: settings.value })
@@ -110,8 +113,8 @@ export async function getGstin(): Promise<string | null> {
     .where(eq(settings.key, "gstin"))
     .limit(1);
 
-  if (row == null) return null;
-  return row.value as string;
+  const value = typeof row?.value === "string" ? row.value.trim() : "";
+  return value && value.toUpperCase() !== "TODO" ? value : null;
 }
 
 /** Announcement-bar copy (Phase 7's admin settings). Falls back to a plain, honest default that

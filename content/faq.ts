@@ -96,9 +96,9 @@ export const COLLECTION_FAQS: Record<string, FaqItem[]> = {
         "Classic Tea is a straightforward blend of natural tea leaves. Premium Assam Tea is sourced specifically from Assam's tea gardens and includes ginger, tulsi, mulethi and cardamom for a spiced, more layered cup.",
     },
     {
-      question: "Does Classic & Assam tea contain caffeine?",
+      question: "Does Black Tea contain caffeine?",
       answer:
-        "Yes — unlike our herbal Blue Tea and Red Tea, Classic and Assam teas are traditional black teas and do contain caffeine.",
+        "Yes — unlike our herbal Blue Tea and Red Tea, Classic Tea and Premium Assam Tea are traditional black teas and do contain caffeine.",
     },
     {
       question: "What pack sizes are available?",

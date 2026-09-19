@@ -25,6 +25,14 @@ export function toProductCardProps(product: ProductCardData): ProductCardProps {
     // (e.g. mid-edit in the admin, later phases) must still render a card rather than throw.
     mrpPaise: primary?.mrpPaise ?? paise(0),
     pricePaise: primary?.pricePaise ?? paise(0),
+    variants: product.variants.map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      optionValue: v.optionValue,
+      mrpPaise: v.mrpPaise,
+      pricePaise: v.pricePaise,
+      inStock: v.inStock,
+    })),
     images: product.images,
     priority: product.priority,
     // Undefined (not a fake variant) when the product genuinely has none yet — ProductCard

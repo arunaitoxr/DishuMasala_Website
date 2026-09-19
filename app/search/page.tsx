@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { searchProducts } from "@/lib/db/queries/search";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string | string[] }>;
@@ -39,8 +41,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const results = q ? await searchProducts(q) : [];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
-      <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">Search</h1>
+    <div className={cn(PAGE_CONTAINER, "py-10 lg:py-14")}>
+      <h1 className="type-page-title text-ink">Search</h1>
 
       <form method="GET" action="/search/" role="search" className="mt-6 flex max-w-lg gap-2">
         <label htmlFor="search-q" className="sr-only">

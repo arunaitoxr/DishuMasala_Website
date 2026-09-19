@@ -464,7 +464,7 @@ export function DesignSystemContent({ trustStrip }: DesignSystemContentProps) {
             slug="classic-tea-250gm"
             name="Classic Tea"
             collectionSlug="classic-teas"
-            collectionTitle="Classic & Assam"
+            collectionTitle="Black Tea"
             optionLabel="Size"
             optionValues={["250g"]}
             mrpPaise={toPaise(199)}

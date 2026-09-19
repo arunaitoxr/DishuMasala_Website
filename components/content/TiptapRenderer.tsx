@@ -19,7 +19,7 @@ import { parseTiptapDoc, type TiptapMark, type TiptapNode } from "@/lib/content/
  */
 export function TiptapRenderer({ doc }: { doc: unknown }) {
   const parsed = parseTiptapDoc(doc);
-  return <div className="prose-content">{parsed.content.map((node, i) => renderNode(node, i))}</div>;
+  return <div className="prose-content copy-justify">{parsed.content.map((node, i) => renderNode(node, i))}</div>;
 }
 
 function renderMarks(text: string, marks: TiptapMark[] | undefined, key: number): ReactNode {

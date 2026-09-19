@@ -3,6 +3,17 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
 import { getWishlistCards } from "@/lib/db/queries/wishlist";
 import { WishlistGrid } from "@/components/account/WishlistGrid";
+import { publicUrl } from "@/lib/storage/storage";
+
+/** Storage key -> public URL, server-side (a client component can't resolve one). */
+function imageUrlFor(storageKey: string | null): string | null {
+  if (!storageKey) return null;
+  try {
+    return publicUrl(storageKey);
+  } catch {
+    return null;
+  }
+}
 
 export const metadata = { title: "Your wishlist", robots: { index: false, follow: false } };
 
@@ -24,7 +35,7 @@ export default async function AccountWishlistPage() {
           </Link>
         </div>
       ) : (
-        <WishlistGrid items={cards} />
+        <WishlistGrid items={cards.map((card) => ({ ...card, imageUrl: imageUrlFor(card.imageStorageKey) }))} />
       )}
     </div>
   );

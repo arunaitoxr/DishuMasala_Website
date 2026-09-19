@@ -30,6 +30,10 @@ export const HOME_COPY = {
       "We're not a giant factory. We're a family that believes purity shouldn't be a luxury. Every blend we make has to pass one final test — the one we started with. Would we serve it to Dishu?",
       "If the answer is yes, it earns its place in your kitchen too.",
     ],
+    /** The two paragraphs the homepage shows — the question the brand began with, and its answer.
+     * The full story lives on /about; the homepage stays about products (reference site: a short
+     * "Our story" block, not an essay ahead of the first product). */
+    homepageExcerpt: [0, 5],
     tagline: "Dishu Masala — pure enough for our daughter, pure enough for your family.",
     // Real name, client-supplied (2026-09-17) — CLAUDE.md §8 bans inventing a founder bio, not
     // using a real one once given. Rendered as a plain attribution line, not a photo (this
@@ -78,6 +82,8 @@ export const HOME_COPY = {
         "stock your pantry and smarter to save.",
       "Curated Together • Better Value • Pantry Ready",
     ],
+    ctaLabel: "Shop Spice Combos",
+    ctaHref: "/collections/combos/",
   },
 
   /**
@@ -99,14 +105,16 @@ export const HOME_COPY = {
     ctaHref: "/collections/spices/",
   },
 
-  classicAssam: {
-    eyebrow: "Classic & Assam",
+  blackTea: {
+    eyebrow: "Black Tea",
     heading: "Everyday Tea, Garden-Fresh",
     body: [
       "Bold, malty loose-leaf black tea, carefully selected for a rich, full-bodied cup that " +
         "makes every everyday brew feel a little more special.",
       "Fresh in character, deep in flavour, and made for the perfect pot, every day.",
     ],
+    ctaLabel: "Shop Black Tea",
+    ctaHref: "/collections/classic-teas/",
   },
 
   ritual: {

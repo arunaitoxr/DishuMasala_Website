@@ -12,16 +12,14 @@ export interface ProductGridProps {
  * product's real image loads — confirmed still true here since nothing in this layer overrides
  * that sizing. `items-stretch` + `h-full` on every card (client request: uniform card dimensions
  * site-wide, not just the homepage carousels) — without it, a grid row's cards only match height
- * when every product name happens to wrap the same number of lines. */
+ * when every product name happens to wrap the same number of lines. Cards appear at once — the
+ * staggered fade-in was dropped (2026-09-20) with the other decorative motion: products should be
+ * there when the page is, and the colour bands stay the one signature motion. */
 export function ProductGrid({ products }: ProductGridProps) {
   return (
     <ul className="grid grid-cols-2 items-stretch gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 xl:gap-6">
-      {products.map((p, i) => (
-        <li
-          key={p.slug}
-          className="flex animate-[card-in_450ms_cubic-bezier(.16,1,.3,1)_both]"
-          style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-        >
+      {products.map((p) => (
+        <li key={p.slug} className="flex">
           <ProductCard {...toProductCardProps(p)} className="h-full w-full" />
         </li>
       ))}

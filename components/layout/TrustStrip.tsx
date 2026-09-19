@@ -1,4 +1,4 @@
-import { getFreeGiftThresholdPaise, getFreeShippingThresholdPaise } from "@/lib/db/queries/settings";
+import { getFreeGiftThresholdPaise } from "@/lib/db/queries/settings";
 import { formatINR } from "@/lib/money";
 
 function PackagingIcon() {
@@ -6,17 +6,6 @@ function PackagingIcon() {
     <svg viewBox="0 0 24 24" fill="none" className="size-5 shrink-0 text-white sm:size-6" aria-hidden="true">
       <rect x="3.5" y="8" width="17" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M3.5 12h17M8 8V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ShippingIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-5 shrink-0 text-white sm:size-6" aria-hidden="true">
-      <path d="M3 7h11v9H3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M14 10h4l3 3v3h-7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="7.5" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="17.5" cy="18" r="1.6" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -59,9 +48,9 @@ function CustomersIcon() {
 }
 
 /**
- * Trust strip — client-directed content (2026-09-17): double-layer packaging, the real free-
- * shipping threshold, the real free-gift threshold, and "Thousands of happy customers," in that
- * order. "Sourced in Punjab" was dropped per that same request (it wasn't in the new copy given).
+ * Trust strip — client-directed content (2026-09-17): double-layer packaging, the real free-gift
+ * threshold, "Thousands of happy customers" and sourcing. (Free shipping moved to the announcement
+ * bar only, 2026-09-20 — it was stated twice within the first 175px.) "Sourced in Punjab" was dropped per that same request (it wasn't in the new copy given).
  *
  * **Logged exception (2026-09-17), same standing pattern as CLAUDE.md §8's logged banner-copy
  * exceptions:** "Thousands of happy customers" is a customer-count claim with no real, verifiable
@@ -74,14 +63,13 @@ function CustomersIcon() {
  * Broad, prominent padding and centered on desktop, with smooth marquee on narrow viewports.
  */
 export async function TrustStrip() {
-  const [freeShippingThresholdPaise, freeGiftThresholdPaise] = await Promise.all([
-    getFreeShippingThresholdPaise(),
-    getFreeGiftThresholdPaise(),
-  ]);
+  // Free shipping is deliberately not repeated here: the announcement bar directly above the
+  // header already states it on every page, and saying it twice in the first 175px wasted the most
+  // valuable strip on the page.
+  const freeGiftThresholdPaise = await getFreeGiftThresholdPaise();
 
   const items = [
     { icon: <PackagingIcon />, label: "Double-layer packaging" },
-    { icon: <ShippingIcon />, label: `Free shipping over ${formatINR(freeShippingThresholdPaise)}` },
     ...(freeGiftThresholdPaise != null
       ? [{ icon: <GiftIcon />, label: `Free gift on orders above ${formatINR(freeGiftThresholdPaise)}` }]
       : []),

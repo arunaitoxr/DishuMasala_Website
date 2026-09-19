@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { getStoreAddress, getSupportEmail, getWhatsAppNumber } from "@/lib/db/queries/settings";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = {
   title: "Contact Us — Dishu Masala",
@@ -40,10 +42,10 @@ export default async function ContactPage() {
   const hasRealPhone = storeAddress && storeAddress.phone !== "TODO";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+    <div className={cn(PAGE_CONTAINER, "py-12 lg:py-16")}>
       <div className="max-w-2xl">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brew-2">Get in touch</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">Contact Us</h1>
+        <h1 className="mt-2 type-page-title text-ink">Contact Us</h1>
         <p className="mt-3 text-base leading-relaxed text-ink-2">
           Questions about an order, a product, or anything else — we&apos;d love to hear from you.
         </p>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { getPublishedPosts } from "@/lib/db/queries/posts";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = {
   title: "Recipes — Dishu Food and Beverages",
@@ -13,8 +15,8 @@ export default async function RecipesIndexPage() {
   const posts = await getPublishedPosts("recipe");
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-      <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">Recipes</h1>
+    <div className={cn(PAGE_CONTAINER, "py-12 lg:py-16")}>
+      <h1 className="type-page-title text-ink">Recipes</h1>
       <p className="mt-2 max-w-xl text-ink-2">Brewing rituals for the teas in our collection.</p>
 
       {posts.length === 0 ? (
@@ -39,6 +41,6 @@ export default async function RecipesIndexPage() {
           ))}
         </ul>
       )}
-    </main>
+    </div>
   );
 }

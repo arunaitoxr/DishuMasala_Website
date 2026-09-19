@@ -77,10 +77,17 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-*,
-*::before,
-*::after {
-  border-color: var(--color-line);
+/* Default hairline colour for every border. Inside `@layer base` on purpose: an unlayered rule
+   beats every layered one regardless of specificity, and Tailwind v4 puts its utilities in
+   `@layer utilities` — so while this sat unlayered, it silently overrode every `border-<colour>`
+   utility in the codebase (error inputs never turned red, checked radios stayed beige, the selected
+   pack card lost its border). In the base layer it is a default that utilities can override. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-line);
+  }
 }
 
 html {
@@ -93,34 +100,51 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Body copy reads justified everywhere by default (client request) — a paragraph's last line
-   still lands left-aligned per normal text-align:justify behaviour, so single-line labels/badges
-   are visually unaffected regardless. Product cards are the explicit exception (short, often
-   single-word labels — name, option chips, price — read worse justified), opted back out via
-   `.text-align-normal` rather than needing every other component to opt in. */
-p {
-  text-align: justify;
-  /* Justification without hyphenation is what produces "rivers" — the large, uneven word gaps that
-     were clearly visible in the founder story at 390px, where a justified line has only 6-8 words
-     to distribute the slack across. `hyphens: auto` lets the browser break long words instead of
-     stretching the spaces, and `text-wrap: pretty` stops the last lines from orphaning.
-     Added 2026-09-17 alongside the mobile-first pass; the client's justified-copy request is
-     unchanged, this only makes it hold up at phone widths. */
-  hyphens: auto;
-  text-wrap: pretty;
-}
-
-/* Below 640px the column is simply too narrow for justification to ever look deliberate, so body
-   copy falls back to ragged-right there. The justified setting the client asked for still applies
-   from the `sm` breakpoint up, which is where it actually reads as typeset rather than as broken. */
-@media (max-width: 639px) {
+/* Justified body copy (client request) is opt-in, via `.copy-justify` on long-form prose — section
+   intros, the founder story, product details, articles. It used to be a bare `p { ... }` rule, which
+   also caught every short UI paragraph (product names, hero subheads, card descriptions, review
+   bodies, empty states) and stretched them into wide word gaps, and — being unlayered — beat any
+   `text-center`/`text-left` utility on a <p>. Below 640px the column is too narrow for justification
+   to look deliberate, so it only applies from `sm` up; hyphenation only exists to keep justified
+   lines even, so it is scoped the same way instead of breaking words in ragged-left copy. */
+@layer base {
   p {
-    text-align: left;
+    text-wrap: pretty;
   }
 }
-.text-align-normal,
-.text-align-normal p {
-  text-align: initial;
+@media (min-width: 640px) {
+  .copy-justify p,
+  p.copy-justify {
+    text-align: justify;
+    hyphens: auto;
+  }
+}
+
+/* Shared type roles (CLAUDE.md §5.3) as classes, so every page title and every section title is
+   the same size, weight and tracking — before this they were inline `clamp()` styles copied per
+   component and had drifted to seven different sizes across pages. `@layer components` so a
+   utility at the call site can still adjust colour or margin. */
+@layer components {
+  .type-page-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2rem, 3.2vw, 3.25rem);
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+  }
+  .type-section-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.75rem, 3vw, 2.75rem);
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+  .type-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
 }
 
 /* Prices and any other data display (stock counts, quantities, order totals) must use tabular
@@ -152,10 +176,8 @@ p {
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-/* Pure CSS, no JS — used for the shop/collection grid's staggered card entrance
-   (components/shop/ProductGrid.tsx). Deliberately not the IntersectionObserver-based
-   ScrollReveal: this grid is visible immediately on page load rather than scrolled to, and /shop
-   has an explicit no-JS Playwright test protecting it, which a JS-gated reveal would risk. */
+/* A short rise-and-fade, used for user-triggered feedback only: the product page's price refresh on a
+   pack switch and the "Added" confirmation on its button (components/pdp/BuyBox.tsx). */
 @keyframes card-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -212,8 +234,7 @@ p {
 }
 
 /*
- * The shared MarqueeStrip's repeating marquee (components/layout/MarqueeStrip.tsx, used by
- * TrustStrip and the Spices section separator) — a continuous horizontal
+ * The shared marquee track (components/layout/MarqueeStrip.tsx and TrustStrip) — a continuous horizontal
  * scroll, not a narrative animation with a meaningful "finished" frame, so it gets its own
  * explicit prefers-reduced-motion override below rather than relying on the generic
  * iteration-count-collapse trick further down this file (that trick would freeze the track
@@ -240,31 +261,6 @@ p {
   }
   .trust-marquee-duplicate {
     display: none;
-  }
-}
-
-/*
- * The homepage's second (post-hero) benefits strip, TeaBenefitsMarquee — visually the same
- * `.trust-marquee-track` treatment as TrustStrip, but scrolling the opposite direction on
- * purpose so the two strips read as a deliberate pair rather than the same motion repeated.
- * TrustStrip goes translateX(0) -> translateX(-50%) (content drifts right-to-left); this one
- * runs that exact same distance in reverse.
- */
-.trust-marquee-track-reverse {
-  display: flex;
-  width: max-content;
-  animation: trust-marquee-reverse 9s linear infinite;
-}
-.trust-marquee-track-reverse:hover {
-  animation-play-state: paused;
-}
-@keyframes trust-marquee-reverse {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .trust-marquee-track-reverse {
-    animation: none;
   }
 }
 

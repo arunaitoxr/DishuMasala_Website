@@ -18,6 +18,10 @@ import { BrewStory } from "@/components/pdp/BrewStory";
 import { Reviews } from "@/components/pdp/Reviews";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { CollectionFaq } from "@/components/sections/CollectionFaq";
+import { SectionHeading } from "@/components/sections/SectionHeading";
+import { Button } from "@/components/ui/Button";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 import { SetWhatsAppOrderMessage } from "@/components/marketing/SetWhatsAppOrderMessage";
 import { formatINR } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
@@ -129,7 +133,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const breadcrumbItems = [
-    { name: "Shop", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/shop` },
+    { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/` },
     ...(collection
       ? [{ name: collection.title, url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/collections/${collection.slug}` }]
       : []),
@@ -177,19 +181,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
        * grey smudges sitting over the product title, the stock line and the pincode field rather
        * than as petals. Both overlays are kept as components for reuse on the collection page. */}
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-16">
+      <div className={cn(PAGE_CONTAINER, "py-8 lg:py-12")}>
       <nav aria-label="Breadcrumb" className="mb-6 text-sm text-ink-2">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
-            <Link href="/shop" className="hover:text-ink hover:underline">
-              Shop
+            <Link href="/" className="hover:text-ink hover:underline">
+              Home
             </Link>
           </li>
           {collection && (
             <>
               <li aria-hidden="true">/</li>
               <li>
-                <Link href={`/collections/${collection.slug}`} className="hover:text-ink hover:underline">
+                <Link href={`/collections/${collection.slug}/`} className="hover:text-ink hover:underline">
                   {collection.title}
                 </Link>
               </li>
@@ -207,7 +211,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-20">
         <Gallery productName={product.name} slides={slides} />
 
-        <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
+        <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
           <PdpInteractive
             productId={product.id}
             productName={product.name}
@@ -250,18 +254,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {related.length > 0 && (
         <div className="mt-16 border-t border-line pt-12">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-            <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">You may also like</h2>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <SectionHeading id="related-heading" heading="You may also like" />
             {otherPillarCollection && (
-              <Link
-                href={`/collections/${otherPillarCollection.slug}`}
-                className="text-sm font-medium text-ink-2 underline underline-offset-4 hover:text-ink"
-              >
-                Explore {otherPillarCollection.title} →
-              </Link>
+              <Button asChild variant="outline" size="md" className="shrink-0 self-start lg:self-end">
+                <Link href={`/collections/${otherPillarCollection.slug}/`}>Explore {otherPillarCollection.title}</Link>
+              </Button>
             )}
           </div>
-          <div className="mt-6">
+          <div className="mt-8">
             <ProductGrid products={related} />
           </div>
         </div>

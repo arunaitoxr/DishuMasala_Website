@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/Accordion";
 import { parseProductDescription } from "@/lib/pdp/parse-description";
 import { formatINR } from "@/lib/money";
@@ -15,7 +16,7 @@ export interface DetailsProps {
 /** Renders multi-line block text as real paragraphs — a plain `\n`-joined string, never markup. */
 function BlockText({ text }: { text: string }) {
   return (
-    <div className="flex flex-col gap-1.5 text-sm leading-relaxed text-ink-2">
+    <div className="copy-justify flex flex-col gap-1.5 text-sm leading-relaxed text-ink-2">
       {text.split("\n").map((line, i) => (
         <p key={i}>{line}</p>
       ))}
@@ -88,12 +89,23 @@ export function Details({ description, freeShippingThresholdPaise, showHealthBen
           <AccordionContent>
             <div className="flex flex-col gap-1.5 text-sm leading-relaxed text-ink-2">
               <p>Free shipping on orders over {formatINR(freeShippingThresholdPaise)}.</p>
-              {/* No return/refund window number exists anywhere in this project's docs today — the
-               * client hasn't supplied one, and CLAUDE.md §8 bans inventing a figure. The real
-               * policy page (returns window, refund process, grievance contact) ships in Phase 8. */}
+              {/* Links to the real policy pages rather than restating a returns window here —
+               * CLAUDE.md §8 bans inventing a figure the client hasn't supplied. This used to say the
+               * policy "will appear here shortly" after those pages already existed. */}
               <p>
-                Our full shipping and returns policy is being finalised and will appear here shortly. For
-                questions about an order, contact us directly.
+                Read our{" "}
+                <Link href="/shipping-policy/" className="font-medium text-ink underline underline-offset-4">
+                  shipping policy
+                </Link>{" "}
+                and{" "}
+                <Link href="/refund-policy/" className="font-medium text-ink underline underline-offset-4">
+                  refund policy
+                </Link>
+                , or{" "}
+                <Link href="/contact/" className="font-medium text-ink underline underline-offset-4">
+                  contact us
+                </Link>{" "}
+                about an order.
               </p>
             </div>
           </AccordionContent>

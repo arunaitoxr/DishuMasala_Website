@@ -6,10 +6,16 @@ import { test, expect } from "@playwright/test";
  * corrected cart, not silently accepted.
  */
 test("POSTing a manipulated total to /api/checkout is rejected with the server's corrected cart, not silently accepted", async ({
+  page,
   request,
 }) => {
+  // A real, in-stock variant read off a live product page rather than a hard-coded id — variant 1
+  // was a duplicate Blue Tea teabag pack, removed from the catalogue on 2026-09-20.
+  await page.goto("/product/premium-herbal-red-tea-loose");
+  const { variantId } = JSON.parse(await page.locator('[data-testid="add-to-cart-payload"]').innerText()) as { variantId: number };
+
   const validateRes = await request.post("/api/cart/validate", {
-    data: { lines: [{ variantId: 1, qty: 1 }], email: `e2e-tamper-${Date.now()}@example.com` },
+    data: { lines: [{ variantId, qty: 1 }], email: `e2e-tamper-${Date.now()}@example.com` },
   });
   expect(validateRes.ok()).toBeTruthy();
   const { pricing: realPricing } = await validateRes.json();
@@ -22,7 +28,7 @@ test("POSTing a manipulated total to /api/checkout is rejected with the server's
     data: {
       idempotencyKey: crypto.randomUUID(),
       email: `e2e-tamper-${Date.now()}@example.com`,
-      lines: [{ variantId: 1, qty: 1 }],
+      lines: [{ variantId, qty: 1 }],
       paymentMethod: "cod",
       shippingAddress: {
         name: "Tamper Tester",

@@ -56,7 +56,7 @@ test("browse → variant → add to cart → WELCOME5 → checkout → mocked Ra
   const chips = page.locator('div[role="radiogroup"] input[type="radio"]');
   if ((await chips.count()) > 1) await chips.nth(1).check({ force: true });
 
-  await page.getByRole("button", { name: "Add to cart" }).click();
+  await page.locator("#pdp-buy-box").getByRole("button", { name: "Add to cart" }).click();
   await expect(page.getByRole("heading", { name: /your cart \(/i })).toBeVisible();
 
   await page.getByRole("link", { name: "Checkout" }).click();

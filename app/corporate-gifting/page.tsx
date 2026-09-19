@@ -11,9 +11,12 @@ import type { SectionImage } from "@/lib/db/queries/settings";
 import { publicUrl } from "@/lib/storage/storage";
 import { GiftingHero } from "@/components/gifting/GiftingHero";
 import { GiftPackCarousel, type GiftPackCardData } from "@/components/gifting/GiftPackCarousel";
-import { TrustBand } from "@/components/gifting/TrustBand";
+import { TrustBand } from "@/components/sections/TrustBand";
+import { SectionHeading } from "@/components/sections/SectionHeading";
 import { BulkEnquiryForm } from "@/components/gifting/BulkEnquiryForm";
-import { GIFT_PACKS } from "@/content/gifting";
+import { GIFT_PACKS, GIFTING_TRUST_BADGES } from "@/content/gifting";
+import { PAGE_CONTAINER, SECTION_SPACING } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = {
   title: "Corporate & Bulk Gifting — Dishu Masala",
@@ -68,36 +71,31 @@ export default async function CorporateGiftingPage() {
     <div className="motion-safe:scroll-smooth">
       <GiftingHero heroImage={heroImage} heroImageMobile={heroImageMobile} />
 
-      <section aria-labelledby="gift-packs-heading" className="bg-bg py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brew-2">Starter packs</p>
-            <h2 id="gift-packs-heading" className="mt-2 font-display text-2xl font-semibold text-ink sm:text-3xl">
-              A starting point — every pack is customisable
-            </h2>
-            <p className="mt-3 text-base leading-relaxed text-ink-2">
-              These aren&apos;t fixed SKUs — tell us your occasion, quantity and budget and we&apos;ll put together
-              something that fits.
-            </p>
-          </div>
+      <section aria-labelledby="gift-packs-heading" className="bg-bg">
+        <div className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
+          <SectionHeading
+            id="gift-packs-heading"
+            eyebrow="Starter packs"
+            heading="A starting point — every pack is customisable"
+            body="These aren't fixed SKUs — tell us your occasion, quantity and budget and we'll put together something that fits."
+          />
           <div className="mt-10">
             <GiftPackCarousel packs={giftPacks} />
           </div>
         </div>
       </section>
 
-      <TrustBand />
+      <TrustBand id="gifting-trust-heading" heading="Why brands choose Dishu" badges={GIFTING_TRUST_BADGES} />
 
-      <section id="bulk-enquiry-form" className="scroll-mt-20 bg-bg py-16 sm:py-24">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6">
-          <div className="text-center">
-            <h2 className="font-display text-2xl font-semibold text-ink sm:text-3xl">Send a bulk enquiry</h2>
-            <p className="mt-3 text-base leading-relaxed text-ink-2">
-              Tell us what you need and our team will get back to you with a quote — usually within one
-              business day.
-            </p>
-          </div>
-          <div className="mt-10 rounded-lg border border-line bg-surface p-6 shadow-card sm:p-10">
+      <section id="bulk-enquiry-form" aria-labelledby="bulk-enquiry-heading" className="scroll-mt-20 bg-bg">
+        <div className={cn(PAGE_CONTAINER, SECTION_SPACING.SECTION)}>
+          <SectionHeading
+            id="bulk-enquiry-heading"
+            heading="Send a bulk enquiry"
+            body="Tell us what you need and our team will get back to you with a quote — usually within one business day."
+            align="center"
+          />
+          <div className="mx-auto mt-8 max-w-2xl rounded-lg border border-line bg-surface p-6 shadow-card sm:p-10">
             <BulkEnquiryForm whatsappNumber={whatsappNumber} supportEmail={supportEmail} />
           </div>
         </div>

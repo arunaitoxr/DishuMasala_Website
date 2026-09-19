@@ -23,16 +23,16 @@ const AUTOPLAY_MS = 3000;
  * banner (no dots/arrows/autoplay, since those all gate on `banners.length > 1`), so there was no
  * need for a second component.
  *
- * Every banner — including the homepage's top slider and each collection page's own hero — is the
- * same contained, rounded-corner card (client request, 2026-09-11: make the hero/page-top banners
- * match the Red Tea section's look, not full-bleed). A prior 2026-08-28 decision had made those two
- * slots edge-to-edge instead; that's reversed now, so `fullBleed` no longer exists as an option.
+ * Section banners (Red Tea, Spices, Black Tea) are contained, rounded-corner cards (client request,
+ * 2026-09-11). The homepage's main slider is the exception again as of 2026-09-20 (client request:
+ * "make it fill the screen, no need for border") — `fullBleed` runs it edge to edge with no card,
+ * padding or container around it.
  */
 export function PromoBannerSlider({
   banners,
   ariaLabel = "Promotions",
   frameRatio,
-  bare = false,
+  fullBleed = false,
 }: {
   banners: HomepageBanner[];
   ariaLabel?: string;
@@ -52,8 +52,9 @@ export function PromoBannerSlider({
    * the client has signed that layout off.
    */
   frameRatio?: { mobile: string; desktop: string };
-  /** Removes the card chrome for the homepage's primary promotional artwork only. */
-  bare?: boolean;
+  /** Edge to edge across the viewport, no card, padding or page container — the homepage's main
+   * slider only. */
+  fullBleed?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -127,10 +128,65 @@ export function PromoBannerSlider({
     touchStartY.current = null;
   }
 
+  // Slide dots + pause. Over the image for the contained section banners; below it for the
+  // full-bleed main banner, whose artwork runs a badge row along its bottom edge that the dots were
+  // covering ("No artificial colours" on desktop, the spice icons on mobile).
+  const controls = (
+    <div
+      className={
+        fullBleed
+          ? "flex items-center justify-center gap-3 bg-bg py-3"
+          : "absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-3"
+      }
+    >
+      <div className={`flex gap-2 rounded-full px-3 py-1.5 ${fullBleed ? "" : "bg-ink/40 backdrop-blur-sm"}`}>
+        {banners.map((banner, i) => (
+          <button
+            key={banner.slot}
+            type="button"
+            aria-label={`Go to slide ${i + 1} of ${banners.length}`}
+            aria-current={i === index}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              goTo(i);
+            }}
+            className={`size-2 rounded-full transition-colors ${
+              fullBleed ? (i === index ? "bg-ink" : "bg-ink/25") : i === index ? "bg-white" : "bg-white/40"
+            }`}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        aria-label={playing ? "Pause slideshow" : "Play slideshow"}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setPlaying((p) => !p);
+        }}
+        className={`flex size-7 items-center justify-center rounded-full ${
+          fullBleed ? "border border-line bg-surface text-ink" : "bg-ink/40 text-white backdrop-blur-sm"
+        }`}
+      >
+        {playing ? (
+          <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true">
+            <rect x="3" y="2" width="3" height="12" rx="0.5" />
+            <rect x="10" y="2" width="3" height="12" rx="0.5" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true">
+            <path d="M4 2.5v11l10-5.5-10-5.5Z" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+
   const frame = (
     <div
       ref={containerRef}
-      className={`promo-banner-frame relative w-full overflow-hidden ${bare ? "" : "rounded-xl bg-surface-2 shadow-card"}`}
+      className={`promo-banner-frame relative w-full overflow-hidden ${fullBleed ? "" : "rounded-xl bg-surface-2 shadow-card"}`}
       style={
         {
           "--pb-ratio-mobile": mobileRatio,
@@ -195,47 +251,7 @@ export function PromoBannerSlider({
         </Link>
       ))}
 
-      {banners.length > 1 && (
-        <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-3">
-          <div className="flex gap-2 rounded-full bg-ink/40 px-3 py-1.5 backdrop-blur-sm">
-            {banners.map((banner, i) => (
-              <button
-                key={banner.slot}
-                type="button"
-                aria-label={`Go to slide ${i + 1} of ${banners.length}`}
-                aria-current={i === index}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  goTo(i);
-                }}
-                className={`size-2 rounded-full transition-colors ${i === index ? "bg-white" : "bg-white/40"}`}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            aria-label={playing ? "Pause slideshow" : "Play slideshow"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setPlaying((p) => !p);
-            }}
-            className="flex size-7 items-center justify-center rounded-full bg-ink/40 text-white backdrop-blur-sm"
-          >
-            {playing ? (
-              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true">
-                <rect x="3" y="2" width="3" height="12" rx="0.5" />
-                <rect x="10" y="2" width="3" height="12" rx="0.5" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true">
-                <path d="M4 2.5v11l10-5.5-10-5.5Z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      )}
+      {banners.length > 1 && !fullBleed && controls}
 
       {banners.length > 1 && (
         <>
@@ -272,8 +288,23 @@ export function PromoBannerSlider({
     </div>
   );
 
+  if (fullBleed) {
+    return (
+      <section aria-roledescription="carousel" aria-label={ariaLabel} className="w-full">
+        {frame}
+        {banners.length > 1 && controls}
+      </section>
+    );
+  }
+
   return (
-    <section aria-roledescription="carousel" aria-label={ariaLabel} className="w-full bg-bg py-6 sm:py-8">
+    // A banner stacked directly under another drops its top padding, so two in a row sit one gap
+    // apart (32px) rather than two (64px).
+    <section
+      aria-roledescription="carousel"
+      aria-label={ariaLabel}
+      className="w-full bg-bg py-6 sm:py-8 [section[aria-roledescription=carousel]+&]:pt-0"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">{frame}</div>
     </section>
   );

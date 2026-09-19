@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionHeading } from "@/components/sections/SectionHeading";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
@@ -118,13 +119,11 @@ export function BrewStory() {
 
   return (
     <section aria-labelledby="brew-story-heading" className="w-full">
-      <h2 id="brew-story-heading" className="font-display text-2xl font-semibold text-ink sm:text-3xl">
-        The Lemon Shift, explained
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">
-        Naturally caffeine-free, made from Butterfly Pea Flower, Spearmint, Ginger, Dandelion, Cinnamon &amp;
-        Lemongrass — and the one tea in the range that changes colour in the cup.
-      </p>
+      <SectionHeading
+        id="brew-story-heading"
+        heading="The Lemon Shift, explained"
+        body="Naturally caffeine-free, made from Butterfly Pea Flower, Spearmint, Ginger, Dandelion, Cinnamon & Lemongrass — and the one tea in the range that changes colour in the cup."
+      />
       <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-3">
         {FRAMES.map((frame, i) => (
           <div

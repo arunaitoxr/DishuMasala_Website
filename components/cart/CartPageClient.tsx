@@ -11,6 +11,8 @@ import { CouponField } from "./CouponField";
 import { OrderSummary } from "./OrderSummary";
 import { TrustIndicators } from "./TrustIndicators";
 import { useCartStore, selectFreeShippingThresholdPaise, selectRupeesToFreeShippingPaise, selectSubtotalPaise } from "@/lib/store/cart";
+import { PAGE_CONTAINER } from "@/lib/design-tokens";
+import { cn } from "@/lib/cn";
 
 /**
  * The full cart page's interactive body (PROMPTS.md Phase 5 item 2) — the cart itself only exists
@@ -27,8 +29,8 @@ export function CartPageClient({ upsells, bestsellers }: { upsells: ReactNode; b
   const rupeesToGoPaise = useCartStore(selectRupeesToFreeShippingPaise);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="font-display text-3xl font-semibold text-ink">Your cart</h1>
+    <div className={cn(PAGE_CONTAINER, "py-10 lg:py-14")}>
+      <h1 className="type-page-title text-ink">Your cart</h1>
 
       <div className="mt-6">
         <CartNotices />
@@ -37,7 +39,7 @@ export function CartPageClient({ upsells, bestsellers }: { upsells: ReactNode; b
       {lines.length === 0 ? (
         <EmptyCart bestsellers={bestsellers} />
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
+        <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]">
           <div className="flex flex-col gap-6">
             {thresholdPaise != null && rupeesToGoPaise != null && (
               <FreeShippingProgress subtotalPaise={subtotalPaise} thresholdPaise={thresholdPaise} rupeesToGoPaise={rupeesToGoPaise} />
@@ -53,7 +55,7 @@ export function CartPageClient({ upsells, bestsellers }: { upsells: ReactNode; b
             <CouponField />
             <OrderSummary pricing={pricing} />
             <Button asChild variant="gradient" size="lg">
-              <Link href="/checkout/">Proceed to checkout →</Link>
+              <Link href="/checkout/">Proceed to checkout</Link>
             </Button>
             <TrustIndicators />
           </aside>
