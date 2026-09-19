@@ -79,7 +79,7 @@ function parseCsv(text: string): CsvRow[] {
   const [header, ...data] = rows;
   const idx = {
     product: header.indexOf("product"),
-    reviewerName: header.indexOf("reviewer_name"),
+    reviewerName: header.indexOf("reviewer_name") !== -1 ? header.indexOf("reviewer_name") : header.indexOf("reviewer"),
     city: header.indexOf("city"),
     state: header.indexOf("state"),
     rating: header.indexOf("rating"),
