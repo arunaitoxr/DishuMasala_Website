@@ -24,6 +24,9 @@ import { products, reviews } from "../lib/db/schema";
 const NAME_ALIASES: Record<string, string> = {
   "premium aasam tea 500gm": "premium assam tea 500gm",
   "premium aasam tea 250gm": "premium assam tea 250gm",
+  "blue tea + red tea duo": "blue tea + red tea (teabags)",
+  "blue tea + red tea transformation combo (4 packs)": "blue tea + red tea (loose)",
+  "red tea + blue tea gift combo": "red tea twin pack",
 };
 
 interface CsvRow {
