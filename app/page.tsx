@@ -3,7 +3,6 @@ import { getHomepageReviewsPage } from "@/lib/db/queries/reviews";
 import { getPublishedProductsByCollectionSlug } from "@/lib/db/queries/products";
 import {
   getHomepageBanners,
-  getRedTeaSectionBanner,
   getRedTeaLifestyleImage,
   getSpicesSectionBanner,
   getClassicTeaSectionBanner,
@@ -70,7 +69,6 @@ export default async function Home() {
     blackTea,
     teaCombos,
     banners,
-    redTeaBanner,
     redTeaLifestyle,
     spicesBanner,
     classicTeaBanner,
@@ -85,7 +83,6 @@ export default async function Home() {
     getPublishedProductsByCollectionSlug("classic-teas"),
     getPublishedProductsByCollectionSlug("tea-combos"),
     getHomepageBanners(),
-    getRedTeaSectionBanner(),
     getRedTeaLifestyleImage(),
     getSpicesSectionBanner(),
     getClassicTeaSectionBanner(),
@@ -185,12 +182,9 @@ export default async function Home() {
         <BlueTeaBand products={blueTea} />
         <RedTeaSection products={redTea} lifestyleImage={redTeaLifestyle} />
       </ScrollColorBand>
-      {/* The two banners are the cream breather between the Red Tea and Masala bands — two
-          saturated bands back to back collapse into one long dark stretch. No wrapper around them:
-          the slider's own section padding is the spacing (a padded wrapper on top of it doubled the
-          gap to 88px each side). The Masala band that follows carries the heading, so the spices
-          banner has no "Spices" title of its own. */}
-      <PromoBannerSlider banners={redTeaBanner} ariaLabel="Red Tea promotion" />
+      {/* Spices banner — cream breather between the Red Tea and Masala bands. No wrapper: the
+          slider's own section padding is the spacing. The Masala band that follows carries the
+          heading, so the spices banner has no "Spices" title of its own. */}
       <PromoBannerSlider banners={spicesBanner} ariaLabel="Spices promotion" />
       <ScrollColorBand fromVar="--color-chilli" toVar="--color-pepper" className="w-full">
         <MasalaBand products={spices} />
