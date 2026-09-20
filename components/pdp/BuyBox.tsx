@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { PriceBlock } from "@/components/ui/PriceBlock";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { Button } from "@/components/ui/Button";
 import { Rating } from "@/components/ui/Rating";
 import { useWishlistToggle } from "@/lib/hooks/useWishlistToggle";
 import { cn } from "@/lib/cn";
-import { formatINR, type Paise } from "@/lib/money";
+import { formatINR, paise, type Paise } from "@/lib/money";
+import { parseVariantOption } from "@/lib/variant-option";
 import type { Variant } from "@/types/catalog";
 
 export interface AddToCartPayload {
@@ -39,6 +40,8 @@ export interface BuyBoxProps {
    * builds lib/store/cart.ts) — the click is real and the payload is correct, it just has nowhere
    * durable to go yet. */
   onAddToCart?: (payload: AddToCartPayload) => void;
+  /** Rendered between the add-to-cart row and the trust badges (Blue Tea's wellness block). */
+  beforeTrust?: ReactNode;
 }
 
 /** Boolean-vs-count stock line (CLAUDE.md §7.6): a null `stockQty` — true for every seeded variant
@@ -91,6 +94,7 @@ export function BuyBox({
   freeShippingThresholdPaise,
   onPayloadChange,
   onAddToCart,
+  beforeTrust,
 }: BuyBoxProps) {
   const [variantId, setVariantId] = useState(variants[0]?.id);
   const [qty, setQty] = useState(1);
@@ -215,27 +219,30 @@ export function BuyBox({
         // instead of scrolling — the phone page grew to 656px wide.
         <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink">{optionLabel}</legend>
-          {/* Tall rectangular cards (client request, 2026-09-17), not pills: selected uses the
-           * brand's citrus/gold yellow with dark ink text — never white on citrus, which fails
-           * contrast outright (CLAUDE.md §5.6's hard floor). The real "best value" tier (computed
-           * above, never a fixed/guessed one) gets a continuously running gold border. */}
-          {/* `pt-3` keeps the "Best Value" badge (which sits across a card's top edge) inside the
-              scroll area, which would otherwise clip it; `pb-2`/`px-1` do the same for focus rings. */}
+          {/* Pack cards modelled on bluetea.co.in's variant picker (client request, 2026-09-20): the
+           * pack photo pops out over the card's top edge, then name (+ tick when selected), a detail
+           * pill, struck MRP and price, a diagonal per-tea-bag ribbon and a "Best Value" tag.
+           * "Best value" is the real deepest-discount tier computed above, never a fixed/guessed one;
+           * the ribbon is the variant's own price per tea bag, or per 100 g, from its own quantity. `pt-16` reserves the
+           * room the photo overhangs into, since the scroll rail would otherwise clip it. */}
           <div className="relative -mx-1">
           <div
             ref={packRailRef}
             role="radiogroup"
             aria-label={optionLabel}
             onScroll={updatePackRail}
-            className="flex snap-x gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 pt-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x gap-4 overflow-x-auto overscroll-x-contain px-1 pb-3 pt-16 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {variants.map((v, i) => {
               const checked = v.id === selected.id;
               const isBestValue = v.id === bestValueVariantId;
-              // A variant with its own real pack photo (e.g. Blue Tea loose's 2-pack/4-pack)
-              // takes priority over the product's shared primary image — client request,
-              // 2026-09-17: "add the pack image above the variant ... matching the width of the
-              // full variant". Falls back to the shared photo so every card still gets one.
+              const { name, detail, basis } = parseVariantOption(v.optionValue);
+              const perUnit = basis
+                ? `${formatINR(paise(Math.round((v.pricePaise * basis.perUnits) / basis.units)))}/${basis.label}`
+                : null;
+              const hasDiscount = v.mrpPaise > v.pricePaise;
+              // A variant with its own real pack photo takes priority over the product's shared
+              // primary image; falls back to the shared photo so every card still gets one.
               const cardImageUrl = v.imageUrl ?? imageUrl;
               return (
                 <label
@@ -244,13 +251,13 @@ export function BuyBox({
                     packCardRefs.current[i] = el;
                   }}
                   className={cn(
-                    // No overflow-hidden here: it clipped the "Best Value" badge that sits across
-                    // the top edge. The image clips its own corners instead (below).
-                    "relative flex w-24 shrink-0 snap-start cursor-pointer flex-col items-center rounded-md border-2 text-center transition-colors duration-[180ms] sm:w-28",
+                    // No overflow-hidden on the label itself: it would clip the overhanging photo.
+                    // The ribbon clips itself inside its own wrapper (below).
+                    "relative flex w-[9.5rem] shrink-0 snap-start cursor-pointer flex-col rounded-xl border pb-8 pt-14 shadow-[0_2px_10px_rgb(0_0_0/.08)] transition-colors duration-[180ms] sm:w-40",
                     "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brew-2 has-[:focus-visible]:ring-offset-2",
                     !v.inStock && "opacity-50",
-                    checked ? "border-citrus bg-citrus text-ink" : "border-line bg-surface text-ink-2 hover:border-ink-3",
-                    isBestValue && "best-value-border",
+                    checked ? "border-ok bg-surface-2" : "border-line bg-surface hover:border-ink-3",
+                    isBestValue && "best-value-glow",
                   )}
                 >
                   <input
@@ -261,32 +268,45 @@ export function BuyBox({
                     onChange={() => selectVariant(v.id)}
                     className="sr-only"
                   />
+                  {cardImageUrl && (
+                    <img
+                      src={cardImageUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-[52%] rounded-lg object-cover shadow-[0_8px_16px_-4px_rgb(23_22_26/.28)]"
+                    />
+                  )}
+                  <span className="flex items-center gap-1.5 px-3 text-sm font-medium leading-tight text-ink">
+                    {name}
+                    {checked && (
+                      <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-ok text-white">
+                        <svg viewBox="0 0 16 16" fill="none" className="size-2.5" aria-hidden="true">
+                          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </span>
+                  {detail && (
+                    <span className="mx-3 mt-2 w-fit rounded-full border border-brew-1/20 bg-brew-1/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-brew-1">
+                      {detail}
+                    </span>
+                  )}
+                  <span className="mt-3 flex flex-col px-3 tabular-nums">
+                    {hasDiscount && <span className="text-[13px] font-medium text-ok line-through">{formatINR(v.mrpPaise)}</span>}
+                    <span className="text-base font-bold text-ink">{formatINR(v.pricePaise)}</span>
+                  </span>
+                  {perUnit && (
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                      <span className={cn("absolute -right-10 bottom-3 w-36 -rotate-45 whitespace-nowrap bg-turmeric/25 py-0.5 text-center font-semibold text-chilli", perUnit.length > 10 ? "text-[9px]" : "text-[10px]")}>
+                        {perUnit}
+                      </span>
+                    </span>
+                  )}
                   {isBestValue && (
-                    <span className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    <span className="absolute bottom-0 left-0 rounded-br-[50px] rounded-tr-md bg-crit py-1 pl-2 pr-3 text-[9px] font-bold text-white shadow-[0_6px_16px_rgb(0_0_0/.14)]">
                       Best Value
                     </span>
                   )}
-                  {checked && (
-                    <span className="absolute right-1 top-1 z-10 flex size-4 items-center justify-center rounded-full bg-ink text-white">
-                      <svg viewBox="0 0 16 16" fill="none" className="size-2.5" aria-hidden="true">
-                        <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                  )}
-                  {cardImageUrl && (
-                    <span className="block w-full overflow-hidden rounded-t-[10px]">
-                      <img
-                        src={cardImageUrl}
-                        alt=""
-                        aria-hidden="true"
-                        className="h-20 w-full object-cover sm:h-24"
-                      />
-                    </span>
-                  )}
-                  <span className="flex flex-col items-center gap-1 px-2 py-2">
-                    <span className="text-sm font-semibold leading-tight text-ink">{v.optionValue}</span>
-                    <span className={cn("text-xs tabular-nums", checked ? "text-ink/80" : "text-ink-3")}>{formatINR(v.pricePaise)}</span>
-                  </span>
                 </label>
               );
             })}
@@ -345,6 +365,8 @@ export function BuyBox({
           </svg>
         </button>
       </div>
+
+      {beforeTrust}
 
       <TrustBadgeRow freeShippingThresholdPaise={freeShippingThresholdPaise} />
 

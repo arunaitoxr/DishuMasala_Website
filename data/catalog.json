@@ -64,7 +64,7 @@
       "variations": [
         {
           "sku": "0024-S",
-          "option": "Starter (1 Pack)",
+          "option": "Starter Pack: 36 tea bags",
           "mrp": 349,
           "price": 349,
           "discountPct": 0,
@@ -72,18 +72,10 @@
         },
         {
           "sku": "0024-V",
-          "option": "Value (2 Packs)",
+          "option": "Value Pack: 72 tea bags",
           "mrp": 698,
           "price": 628,
           "discountPct": 10,
-          "inStock": true
-        },
-        {
-          "sku": "0024-T",
-          "option": "Transformation (3 Packs)",
-          "mrp": 1047,
-          "price": 838,
-          "discountPct": 20,
           "inStock": true
         }
       ],
@@ -168,7 +160,7 @@
       ],
       "optionLabel": "Teabags",
       "shortDescription": "Unwind with Dishu Masala Premium Herbal Red Tea teabags — a naturally caffeine-free herbal infusion with a warm, earthy flavour. Made from carefully selected herbs with no preservatives and no artificial colour, each teabag delivers a soothing, ruby-red cup. A clean-label wellness tea and a healthy alternative to regular chai for relaxing evenings.",
-      "description": "Red Tea, also known as Herbal Red Tea, is a refreshing caffeine-free herbal infusion crafted with Hibiscus and Rose Flowers. It is known for its vibrant ruby-red color, floral aroma, and pleasantly tangy taste, making it a soothing beverage that can be enjoyed any time of the day.\n\nKey Characteristics:\n\nFlavor: Refreshing, mildly tangy, and naturally floral with a smooth finish.\nAroma: Delicate rose fragrance blended with the fresh, fruity notes of hibiscus.\nIngredients: Hibiscus, Rose Patels, Holy Besils, Ginger Extracts.\nColor: Bright ruby red with a rich, vibrant appearance.\n\nCulinary Uses:\n\nHot Tea: Enjoy as a warm, soothing beverage.\nIced Tea: Serve chilled for a refreshing summer drink.\nWellness Drink: Perfect for daily relaxation and hydration.\nMocktails & Coolers: A natural base for refreshing herbal beverages.\nDesserts: Can be infused into syrups, jellies, and herbal desserts.\n\nHealth Benefits:\n\nRich in Antioxidants: Helps protect the body from oxidative stress.\nSupports Skin Health: Hibiscus and rose are traditionally known to promote healthy, glowing skin.\nNaturally Caffeine-Free: Suitable for any time of the day without caffeine.\nSupports Hydration: A refreshing herbal drink that helps keep you hydrated.\nPromotes Relaxation: The floral aroma provides a calming and soothing experience.\n\nStorage:\n\nStore in an airtight container or reseal the pouch after every use.\nKeep in a cool, dry place away from direct sunlight and moisture.\nFor the best flavour and freshness, consume within the recommended period after opening.",
+      "description": "Red Tea, also known as Herbal Red Tea, is a refreshing caffeine-free herbal infusion crafted with Hibiscus and Rose Flowers. It is known for its vibrant ruby-red color, floral aroma, and pleasantly tangy taste, making it a soothing beverage that can be enjoyed any time of the day.\n\nKey Characteristics:\n\nFlavor: Refreshing, mildly tangy, and naturally floral with a smooth finish.\nAroma: Delicate rose fragrance blended with the fresh, fruity notes of hibiscus.\nIngredients: Hibiscus, Rose Patels, Holy Besils, Ginger Extracts.\nColor: Bright ruby red with a rich, vibrant appearance.\n\nCulinary Uses:\n\nHot Tea: Enjoy as a warm, soothing beverage.\nIced Tea: Serve chilled for a refreshing summer drink.\nWellness Drink: Perfect for daily relaxation and hydration.\nMocktails & Coolers: A natural base for refreshing herbal beverages.\nDesserts: Can be infused into syrups, jellies, and herbal desserts.\n\nHealth Benefits:\n\nIndulge in the tangy and refreshing flavors of hibiscus tea. Loaded with antioxidants and Vitamin C, this zero-caffeine herbal tea supports heart health, brightens your skin & strengthens your hair.\nRegulates blood pressure\nLowers bad cholesterol\nBoosts collagen production\nImproves immunity\nSupports heart health\nIntermittent & Keto friendly\nEnjoy hibiscus tea hot or cold for a refreshing, nourishing, and hydrating experience.\n\nStorage:\n\nStore in an airtight container or reseal the pouch after every use.\nKeep in a cool, dry place away from direct sunlight and moisture.\nFor the best flavour and freshness, consume within the recommended period after opening.",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2026/07/product-image9-1.jpg",
         "https://dishumasala.com/wp-content/uploads/2026/07/product-image9-2.jpg",
@@ -216,7 +208,7 @@
       ],
       "optionLabel": "Size",
       "shortDescription": "Dishu Masala Premium Herbal Red Tea (loose leaf) is a caffeine-free herbal blend that brews into a rich, ruby-red cup with a smooth, earthy taste. Free from preservatives and artificial colour, this clean-label wellness tea is ideal for slow, mindful brewing. Available in 52 gm and 105 gm packs — a comforting, healthy alternative to everyday tea.",
-      "description": "Red Tea (Loose) is a premium herbal loose leaf tea blend crafted with Hibiscus and Rose Flowers. Known for its vibrant ruby-red infusion, refreshing floral aroma, and naturally tangy taste, this caffeine-free tea offers a soothing and revitalizing experience in every cup.\n\nKey Characteristics:\n\nFlavor: Refreshing, mildly tangy, and naturally floral with a smooth finish.\nAroma: Pleasant floral fragrance with delicate notes of rose and hibiscus.\nIngredients: Hibiscus, Rose Patels, Holy Besils, Ginger Extracts.\nColor: Deep ruby red with a bright, vibrant appearance.\n\nCulinary Uses:\n\nHot Herbal Tea: Brew fresh for a soothing and comforting cup.\nIced Tea: Enjoy chilled for a refreshing summer beverage.\nWellness Drink: Ideal for daily relaxation and hydration.\nMocktails & Infusions: A perfect base for herbal coolers and fruit infusions.\nNatural Beverage: Can be enjoyed plain or with honey, lemon, or other natural sweeteners.\n\nHealth Benefits:\n\nRich in Antioxidants: Helps protect the body from oxidative stress.\nSupports Healthy Skin: Hibiscus and rose are traditionally valued for promoting radiant skin.\nNaturally Caffeine-Free: Enjoy any time of the day without caffeine.\nSupports Hydration: A light and refreshing herbal drink.\nPromotes Relaxation: The floral aroma creates a calming tea experience.\n\nStorage:\n\nStore the loose tea in an airtight container or reseal the pouch after every use.\nKeep in a cool, dry place away from direct sunlight and moisture.\nFor maximum freshness and flavour, use a dry spoon and keep the pouch tightly sealed.",
+      "description": "Red Tea (Loose) is a premium herbal loose leaf tea blend crafted with Hibiscus and Rose Flowers. Known for its vibrant ruby-red infusion, refreshing floral aroma, and naturally tangy taste, this caffeine-free tea offers a soothing and revitalizing experience in every cup.\n\nKey Characteristics:\n\nFlavor: Refreshing, mildly tangy, and naturally floral with a smooth finish.\nAroma: Pleasant floral fragrance with delicate notes of rose and hibiscus.\nIngredients: Hibiscus, Rose Patels, Holy Besils, Ginger Extracts.\nColor: Deep ruby red with a bright, vibrant appearance.\n\nCulinary Uses:\n\nHot Herbal Tea: Brew fresh for a soothing and comforting cup.\nIced Tea: Enjoy chilled for a refreshing summer beverage.\nWellness Drink: Ideal for daily relaxation and hydration.\nMocktails & Infusions: A perfect base for herbal coolers and fruit infusions.\nNatural Beverage: Can be enjoyed plain or with honey, lemon, or other natural sweeteners.\n\nHealth Benefits:\n\nIndulge in the tangy and refreshing flavors of hibiscus tea. Loaded with antioxidants and Vitamin C, this zero-caffeine herbal tea supports heart health, brightens your skin & strengthens your hair.\nRegulates blood pressure\nLowers bad cholesterol\nBoosts collagen production\nImproves immunity\nSupports heart health\nIntermittent & Keto friendly\nEnjoy hibiscus tea hot or cold for a refreshing, nourishing, and hydrating experience.\n\nStorage:\n\nStore the loose tea in an airtight container or reseal the pouch after every use.\nKeep in a cool, dry place away from direct sunlight and moisture.\nFor maximum freshness and flavour, use a dry spoon and keep the pouch tightly sealed.",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2026/07/product-image8-1.jpg",
         "https://dishumasala.com/wp-content/uploads/2026/07/product-image8-2.jpg",
@@ -491,7 +483,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Black Pepper + Garam Masala + Coriander combo (100 gm x 3) brings three kitchen essentials together in one value pack. Freshly ground and clean-label with no preservatives, these pure spices add bold aroma, warmth and depth to everyday cooking at home.",
-      "description": "Black Pepper — Bold and pungent, freshly ground to elevate flavor and add a natural kick of heat.\nGaram Masala — A rich blend of premium spices, adding depth, warmth, and authentic Indian flavor to your dishes.\nCoriander Powder — Fresh and earthy, enhances curries, dals, and vegetables with a subtle, refreshing taste.",
+      "description": "Build rich, layered flavour with the Dishu Masala Black Pepper + Garam Masala + Coriander Combo. This three-spice combination brings together the sharp warmth of black pepper, the aromatic richness of garam masala and the earthy character of coriander.\n\nWhether you're preparing a hearty curry, creamy paneer gravy, dal or vegetable dish, these three spices give you a versatile foundation for authentic Indian flavours.\n\nPerfect for: Curries • Paneer • Gravies • Dal • Sabzis • Marinades",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-6.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image5-1.jpg",
@@ -524,7 +516,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Garam Masala + Black Pepper combo (100 gm x 2) pairs two must-have spices for rich, aromatic cooking. Freshly ground and preservative-free, this clean-label duo brings warmth, depth and a peppery kick to curries, gravies and everyday dishes. Great value pack for flavour-loving home kitchens.",
-      "description": "Garam Masala — A rich blend of premium spices, adding depth, warmth, and authentic Indian flavor to your dishes.\nBlack Pepper — Bold and pungent, freshly ground to elevate flavor and add a natural kick of heat.",
+      "description": "Bring bold warmth and aromatic depth to your everyday cooking with the Dishu Masala Garam Masala + Black Pepper Combo. Garam Masala adds a rich blend of warm, fragrant spices, while black pepper contributes a distinctive peppery kick and lingering warmth.\n\nTogether, they are perfect for creating flavourful curries, gravies, paneer dishes, vegetables, marinades and North Indian recipes.\n\nPerfect for: Curries • Gravies • Paneer • Sabzis • Marinades • Everyday Cooking",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-1.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image4-1.jpg",
@@ -556,7 +548,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Black Pepper + Coriander combo (100 gm x 2) combines two everyday essentials in one value pack. Pure, freshly ground and free from preservatives, these clean-label spices add earthy aroma and a gentle heat to your cooking — a handy duo for seasoning curries, snacks and daily meals.",
-      "description": "Black Pepper — Bold and pungent, freshly ground to elevate flavor and add a natural kick of heat.\nCoriander Powder — Fresh and earthy, enhances curries, dals, and vegetables with a subtle, refreshing taste.",
+      "description": "A versatile pairing of bold peppery warmth and fresh earthy flavour. The Dishu Masala Black Pepper + Coriander Combo combines the sharp character of black pepper with the mellow, aromatic notes of coriander.\n\nUse them individually or together to add depth to curries, soups, marinades, vegetables, dals and everyday meals.\n\nPerfect for: Soups • Curries • Dals • Marinades • Vegetables • Everyday Cooking",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-5.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image5-1.jpg",
@@ -588,7 +580,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Turmeric + Red Chilli + Coriander combo brings the three core Indian cooking spices together in one clean-label pack. Freshly ground, pure and preservative-free, they deliver vibrant colour, balanced heat and earthy aroma to everyday dishes. Available in 100 gm x 3 and 200 gm x 3 — an essential trio for every kitchen.",
-      "description": "Turmeric Powder — Pure and vibrant, packed with natural curcumin for color, flavor, and health benefits.\nRed Chilli Powder — Bold and fiery, adds perfect heat and aroma to your favorite recipes.\nCoriander Powder — Freshly ground, offering earthy notes and a refreshing taste to enhance curries and dals.",
+      "description": "Create the foundation for countless Indian recipes with the Dishu Masala Turmeric + Red Chilli + Coriander Combo.\n\nTurmeric contributes vibrant golden colour and earthy depth, red chilli brings colour and heat, while coriander adds warmth and aromatic balance. Together, these three kitchen staples make an incredibly versatile spice collection for everyday meals.\n\nPerfect for: Dal • Sabzi • Curries • Gravies • Rice • Marinades",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-7.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image2-1.jpg",
@@ -629,7 +621,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Turmeric + Red Chilli combo pairs two everyday must-haves for colour and heat. Pure, freshly ground and free from preservatives, this clean-label duo brings golden warmth and balanced spice to your cooking. Available in 100 gm x 2 and 200 gm x 2 value packs for daily Indian meals.",
-      "description": "Turmeric Powder — Pure and vibrant, packed with natural curcumin for color, flavor, and health benefits.\nRed Chilli Powder — Bold and fiery, adds perfect heat and aroma to your favorite recipes.",
+      "description": "Two everyday essentials, one convenient combination. Dishu Masala Turmeric + Red Chilli Combo brings together the natural golden colour and earthy flavour of turmeric with the vibrant colour and spicy character of red chilli.\n\nIdeal for adding colour, warmth and flavour to everyday Indian cooking, from simple sabzis and dals to curries and marinades.\n\nPerfect for: Curries • Dal • Sabzis • Marinades • Stir-Fries • Everyday Cooking",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-3.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image2-1.jpg",
@@ -669,7 +661,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Red Chilli + Coriander combo brings heat and earthy aroma together in one clean-label value pack. Freshly ground and preservative-free, these pure spices are everyday essentials for curries, sabzis and marinades. Available in 100 gm x 2 and 200 gm x 2 — a practical duo for flavour-rich home cooking.",
-      "description": "Red Chilli Powder — Bold and fiery, adds perfect heat and aroma to your favorite recipes.\nCoriander Powder — Freshly ground, offering earthy notes and a refreshing taste to enhance curries and dals.",
+      "description": "Add colour, warmth and balanced spice to your cooking with the Dishu Masala Red Chilli + Coriander Combo. Red chilli delivers vibrant colour and bold heat, while coriander adds an earthy, aromatic and mildly citrusy character.\n\nTogether, these two spices create an excellent foundation for curries, gravies, sabzis, dals and marinades.\n\nPerfect for: Curries • Gravies • Sabzis • Dal • Marinades • Masala Dishes",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-2.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image1-1.jpg",
@@ -709,7 +701,7 @@
       ],
       "optionLabel": "Combo",
       "shortDescription": "Dishu Masala Turmeric + Coriander combo pairs two staple spices for colour and depth. Pure, freshly ground and free from preservatives, this clean-label duo adds golden warmth and a mild, earthy aroma to daily dishes. Available in 100 gm x 2 and 200 gm x 2 value packs for your everyday kitchen.",
-      "description": "Turmeric Powder — Pure and vibrant, packed with natural curcumin for color, flavor, and health benefits.\nCoriander Powder — Freshly ground, offering earthy notes and a refreshing taste to enhance curries and dals.",
+      "description": "A simple combination of two essential Indian kitchen spices. Dishu Masala Turmeric + Coriander Combo brings together the golden colour and earthy character of turmeric with the warm, aromatic and mildly citrusy flavour of coriander.\n\nA versatile everyday pairing for dals, sabzis, curries, rice dishes and traditional home-style recipes.\n\nPerfect for: Dal • Sabzi • Curries • Rice • Marinades • Everyday Meals",
       "images": [
         "https://dishumasala.com/wp-content/uploads/2025/09/combo-product-4.jpg",
         "https://dishumasala.com/wp-content/uploads/2025/09/product-image2-1.jpg",

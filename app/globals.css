@@ -171,9 +171,12 @@ body {
   to { opacity: 1; }
 }
 
+/* Fade with a barely-there scale. No translate here: components/ui/Dialog.tsx centres the panel with
+   Tailwind's `-translate-x/y-1/2`, which is the separate `translate` property, so a translate in
+   this transform would stack on top of it and start the panel half a screen off-centre. */
 @keyframes dialog-in {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* A short rise-and-fade, used for user-triggered feedback only: the product page's price refresh on a
@@ -276,30 +279,72 @@ body {
 }
 
 /*
- * The PDP variant selector's "best value" running-border (components/pdp/BuyBox.tsx) — a thin
- * gold line that continuously travels around the card's edge, marking whichever real variant has
- * the best discount among the product's own options (never a fixed/guessed tier). `@property
- * --angle` is what makes the conic-gradient itself animatable (browsers without support for it
- * just show the gradient frozen at 0deg — a static gold accent on that corner, not a broken
- * layout); the generic prefers-reduced-motion collapse above already freezes the rotation to one
- * frame, which reads as a still gold border, not as something failing to finish.
+ * Falling flower petals (components/sections/HeroFloraOverlay.tsx). Each petal sets its own
+ * duration/delay/drift/spin through custom properties; the keyframes only describe the shared path.
+ * Hidden entirely under prefers-reduced-motion — a frozen petal mid-air reads as a smudge, not a
+ * finished state.
+ */
+.petal-field {
+  container-type: size;
+}
+.petal {
+  position: absolute;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: petal-fall var(--petal-duration) linear var(--petal-delay) infinite;
+}
+@keyframes petal-fall {
+  0%   { transform: translate3d(0, -10cqh, 0) rotate(0deg); opacity: 0; }
+  8%   { opacity: .95; }
+  50%  { transform: translate3d(calc(var(--petal-drift) * .3), 45cqh, 0) rotate(calc(var(--petal-spin) * .5)); }
+  92%  { opacity: .95; }
+  100% { transform: translate3d(var(--petal-drift), 105cqh, 0) rotate(var(--petal-spin)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .petal-field {
+    display: none;
+  }
+}
+
+/*
+ * The PDP variant selector's "best value" running light (components/pdp/BuyBox.tsx) — a short red
+ * arc that continuously travels around the card's own border (a 1.4px line lying exactly on the
+ * edge, corners included), marking whichever real variant has the best discount among the
+ * product's own options (never a fixed/guessed tier). `@property --best-value-angle` is what makes
+ * the conic-gradient itself animatable (browsers without support just show the arc frozen at 0deg —
+ * a static accent on that corner, not a broken layout); the generic prefers-reduced-motion
+ * collapse below already freezes it to one frame, which reads as a still highlighted border rather
+ * than something failing to finish. The ring is the gradient masked down to the border; it is the
+ * label's first child, so the pack photo (a later positioned child) paints over it and the line
+ * appears to run behind the image.
  */
 @property --best-value-angle {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
-.best-value-border {
+.best-value-glow {
   position: relative;
   isolation: isolate;
 }
-.best-value-border::before {
+.best-value-glow::before {
   content: "";
   position: absolute;
-  inset: -2px;
-  z-index: -1;
+  inset: -1px;
+  padding: 1.4px;
   border-radius: inherit;
-  background: conic-gradient(from var(--best-value-angle), transparent 0%, var(--color-gold) 12%, transparent 28%);
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--best-value-angle),
+    transparent 0%,
+    transparent 60%,
+    color-mix(in srgb, var(--color-gold) 55%, transparent) 82%,
+    var(--color-gold) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   animation: best-value-rotate 2.6s linear infinite;
 }
 @keyframes best-value-rotate {

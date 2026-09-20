@@ -177,7 +177,7 @@ export default async function Home() {
       <TrustStrip />
       <CategoryCircles items={categoryCircleItems} />
       <PromoBannerSlider banners={banners} fullBleed />
-      <MarqueeStrip ariaLabel="Why Dishu" items={HOME_BENEFIT_STRIP.map((b) => ({ label: b.label }))} />
+      <MarqueeStrip ariaLabel="Why Dishu" items={HOME_BENEFIT_STRIP.map((b) => ({ label: b.label }))} tone="blue" />
       <ScrollColorBand fromVar="--color-brew-2" viaVar="--color-brew-5" toVar="--color-hibiscus" className="w-full">
         <BlueTeaBand products={blueTea} />
         <RedTeaSection products={redTea} lifestyleImage={redTeaLifestyle} />

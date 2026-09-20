@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/Accordion";
-import { parseProductDescription } from "@/lib/pdp/parse-description";
+import { parsePlainDescription, parseProductDescription } from "@/lib/pdp/parse-description";
 import { formatINR } from "@/lib/money";
 import type { Paise } from "@/lib/money";
 
 export interface DetailsProps {
   description: string | null;
   freeShippingThresholdPaise: Paise;
-  /** Gates the "Wellness Benefits" accordion (see this file's other comment) — true only for the
-   * two Blue Tea product slugs the client explicitly confirmed this copy for. Every other
-   * product's own "Health Benefits" text stays parsed-but-unrendered, same as before. */
-  showHealthBenefits?: boolean;
+  /** Shows the description as its own open "Description" accordion (paragraphs plus "Perfect for"
+   * tags) — for the Spice Combos, whose description has no "Key Characteristics"-style sections. */
+  showDescription?: boolean;
 }
 
 /** Renders multi-line block text as real paragraphs — a plain `\n`-joined string, never markup. */
@@ -27,15 +26,16 @@ function BlockText({ text }: { text: string }) {
 /**
  * Accordions built from the product's own stored `description` copy (Key Characteristics,
  * Ingredients, How to brew / How to use) plus one generic, identical-on-every-PDP Shipping &
- * Returns accordion (PROMPTS.md Phase 4 item 5). "Health Benefits" is parsed by
- * lib/pdp/parse-description.ts but rendered only when `showHealthBenefits` is true — CLAUDE.md §8
- * bans this project from authoring health claims on its own initiative, so this stays off by
- * default; it's on only for the two Blue Tea products, where the client supplied this exact copy
- * and confirmed using it twice (see parse-description.ts's header comment for the full log).
+ * Returns accordion (PROMPTS.md Phase 4 item 5). "Health Benefits" is deliberately not here: it is
+ * parsed by lib/pdp/parse-description.ts and shown, for the two Blue Tea products only, as its own
+ * section (components/pdp/WellnessBenefits.tsx) — CLAUDE.md §8 bans this project from authoring
+ * health claims on its own initiative.
  */
-export function Details({ description, freeShippingThresholdPaise, showHealthBenefits = false }: DetailsProps) {
+export function Details({ description, freeShippingThresholdPaise, showDescription = false }: DetailsProps) {
   const parsed = parseProductDescription(description);
+  const plain = showDescription ? parsePlainDescription(description) : null;
   const defaultOpen: string[] = [];
+  if (plain && plain.paragraphs.length > 0) defaultOpen.push("description");
   if (parsed.keyCharacteristics) defaultOpen.push("characteristics");
 
   return (
@@ -48,6 +48,31 @@ export function Details({ description, freeShippingThresholdPaise, showHealthBen
         Details
       </h2>
       <Accordion type="multiple" defaultValue={defaultOpen}>
+        {plain && plain.paragraphs.length > 0 && (
+          <AccordionItem value="description">
+            <AccordionTrigger>Description</AccordionTrigger>
+            <AccordionContent>
+              <div className="copy-justify flex flex-col gap-3 text-sm leading-relaxed text-ink-2">
+                {plain.paragraphs.map((paragraph, i) => (
+                  <p key={i}>{paragraph}</p>
+                ))}
+              </div>
+              {plain.perfectFor.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-semibold text-ink">Perfect for</p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {plain.perfectFor.map((item) => (
+                      <li key={item} className="rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-medium text-ink-2">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
         {parsed.keyCharacteristics && (
           <AccordionItem value="characteristics">
             <AccordionTrigger>Key Characteristics</AccordionTrigger>
@@ -71,15 +96,6 @@ export function Details({ description, freeShippingThresholdPaise, showHealthBen
             <AccordionTrigger>How to brew / How to use</AccordionTrigger>
             <AccordionContent>
               <BlockText text={parsed.howToUse} />
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {showHealthBenefits && parsed.healthBenefits && (
-          <AccordionItem value="wellness-benefits">
-            <AccordionTrigger>Wellness Benefits</AccordionTrigger>
-            <AccordionContent>
-              <BlockText text={parsed.healthBenefits} />
             </AccordionContent>
           </AccordionItem>
         )}

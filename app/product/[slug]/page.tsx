@@ -15,6 +15,9 @@ import { PdpInteractive } from "@/components/pdp/PdpInteractive";
 import { PincodeCheck } from "@/components/pdp/PincodeCheck";
 import { Details } from "@/components/pdp/Details";
 import { BrewStory } from "@/components/pdp/BrewStory";
+import { WellnessBenefits } from "@/components/pdp/WellnessBenefits";
+import { ProductVideo } from "@/components/pdp/ProductVideo";
+import { parseProductDescription } from "@/lib/pdp/parse-description";
 import { Reviews } from "@/components/pdp/Reviews";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { CollectionFaq } from "@/components/sections/CollectionFaq";
@@ -26,6 +29,8 @@ import { SetWhatsAppOrderMessage } from "@/components/marketing/SetWhatsAppOrder
 import { formatINR } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
 import { getProductVideo } from "@/content/product-videos";
+
+const WELLNESS_HEADINGS: Record<string, string> = { "blue-tea": "Why Blue Tea", "red-tea": "Why Red Tea" };
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -80,6 +85,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const collection = collections.find((c) => c.id === product.collectionId) ?? null;
 
   const isBlueTea = collection?.slug === "blue-tea";
+  // Collections whose products show the wellness block, with its heading. Client-supplied copy only:
+  // Blue Tea (confirmed 2026-09-17) and Red Tea (supplied 2026-09-20). No other collection gets it.
+  const wellnessHeading = collection ? WELLNESS_HEADINGS[collection.slug] : undefined;
+  const wellnessText = wellnessHeading ? parseProductDescription(product.description).healthBenefits : null;
   const primaryVariant = product.variants[0];
 
   // Cross-pillar nudge (CLAUDE.md §7.2's 2026-09-10 amendment: Tea and Masala are co-equal
@@ -98,8 +107,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
       const url = safeImageUrl(img.storageKey);
       return url ? [{ kind: "image" as const, url, alt: img.alt, width: img.width, height: img.height }] : [];
     });
+  // The product video is no longer a gallery slide — it has its own section after the details
+  // (client request, 2026-09-20).
   const productVideo = getProductVideo(product.slug);
-  if (productVideo) slides.push({ kind: "video", ...productVideo });
 
   const primaryImageKey = product.images.find((img) => img.isPrimary)?.storageKey ?? product.images[0]?.storageKey;
   const primaryImageUrl = primaryImageKey ? safeImageUrl(primaryImageKey) : null;
@@ -222,6 +232,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
             reviewCount={reviewSummary.count}
             reviewAverage={reviewSummary.average}
             freeShippingThresholdPaise={freeShippingThresholdPaise}
+            // Blue Tea's collection has exactly these two products (loose + teabags) — the two slugs
+            // the client explicitly confirmed this wellness copy for (lib/pdp/parse-description.ts).
+            // No other collection gets it.
+            beforeTrust={wellnessHeading && wellnessText ? <WellnessBenefits text={wellnessText} heading={wellnessHeading} /> : undefined}
           />
 
           <PincodeCheck />
@@ -229,13 +243,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <Details
             description={product.description}
             freeShippingThresholdPaise={freeShippingThresholdPaise}
-            // Blue Tea's collection has exactly these two products (loose + teabags) — the two
-            // slugs the client explicitly confirmed this Wellness Benefits copy for (see
-            // Details.tsx / lib/pdp/parse-description.ts). No other collection gets this on.
-            showHealthBenefits={isBlueTea}
+            showDescription={collection?.slug === "combos"}
           />
         </div>
       </div>
+
+      {productVideo && (
+        <div className="mt-16 border-t border-line pt-12">
+          <ProductVideo video={productVideo} />
+        </div>
+      )}
 
       {isBlueTea && (
         <div className="mt-16 border-t border-line pt-12">

@@ -19,6 +19,13 @@ const BLUE_TEA: ProductVideo = {
   height: 1280,
 };
 
+const BLUE_TEA_LOOSE: ProductVideo = {
+  url: `${VIDEO_ROOT}/BlueTeaLoose.mp4`,
+  alt: "Premium Herbal Blue Tea (loose) preparation video",
+  width: 720,
+  height: 1280,
+};
+
 const RED_TEA: ProductVideo = {
   url: `${VIDEO_ROOT}/RedTea.mp4`,
   alt: "Premium Herbal Red Tea preparation video",
@@ -26,11 +33,18 @@ const RED_TEA: ProductVideo = {
   height: 1280,
 };
 
+const RED_TEA_LOOSE: ProductVideo = {
+  url: `${VIDEO_ROOT}/RedTeaLoose.mp4`,
+  alt: "Premium Herbal Red Tea (loose) preparation video",
+  width: 720,
+  height: 1280,
+};
+
 const PRODUCT_VIDEOS: Record<string, ProductVideo> = {
   "premium-herbal-blue-tea-teabags": BLUE_TEA,
-  "premium-herbal-blue-tea-loose": BLUE_TEA,
+  "premium-herbal-blue-tea-loose": BLUE_TEA_LOOSE,
   "premium-herbal-red-tea-teabags": RED_TEA,
-  "premium-herbal-red-tea-loose": RED_TEA,
+  "premium-herbal-red-tea-loose": RED_TEA_LOOSE,
   "black-pepper-powder": {
     url: `${VIDEO_ROOT}/BlackPepper.mp4`,
     alt: "Black Pepper Powder product video",

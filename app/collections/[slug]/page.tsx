@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { CollectionFaq } from "@/components/sections/CollectionFaq";
+import { HeroFloraOverlay, hasHeroFlora } from "@/components/sections/HeroFloraOverlay";
 import { PageHero } from "@/components/sections/PageHero";
 import { SectionHeading } from "@/components/sections/SectionHeading";
 import { TrustBand } from "@/components/sections/TrustBand";
@@ -92,6 +93,8 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         }
         tone="light"
         bandClassName={copy.bandClassName}
+        bandTone={copy.invertedStripTone ? "cream" : "brand"}
+        overlay={hasHeroFlora(collection.slug) ? <HeroFloraOverlay kind={collection.slug} /> : undefined}
       />
 
       {/* Client bug list row 3 (2026-09-17): benefit strip directly under the herbal-tea banners.
@@ -100,6 +103,7 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         <MarqueeStrip
           ariaLabel={`${collection.title} product qualities`}
           items={TEA_BENEFIT_STRIP.map((b) => ({ label: b.label }))}
+          tone={copy.invertedStripTone ?? "cream"}
         />
       )}
 

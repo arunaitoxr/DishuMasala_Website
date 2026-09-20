@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BuyBox, type AddToCartPayload } from "@/components/pdp/BuyBox";
 import { StickyAddToCart } from "@/components/pdp/StickyAddToCart";
 import { useCartStore } from "@/lib/store/cart";
@@ -20,6 +20,8 @@ export interface PdpInteractiveProps {
   reviewCount: number;
   reviewAverage: number;
   freeShippingThresholdPaise: Paise;
+  /** Passed straight through to BuyBox's `beforeTrust` slot. */
+  beforeTrust?: ReactNode;
 }
 
 /**
@@ -39,6 +41,7 @@ export function PdpInteractive({
   reviewCount,
   reviewAverage,
   freeShippingThresholdPaise,
+  beforeTrust,
 }: PdpInteractiveProps) {
   const addItem = useCartStore((s) => s.addItem);
   const [payload, setPayload] = useState<AddToCartPayload | null>(() => {
@@ -100,6 +103,7 @@ export function PdpInteractive({
           freeShippingThresholdPaise={freeShippingThresholdPaise}
           onPayloadChange={setPayload}
           onAddToCart={addToCart}
+          beforeTrust={beforeTrust}
         />
       </div>
 

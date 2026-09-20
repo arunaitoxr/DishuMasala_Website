@@ -19,6 +19,9 @@ export interface CollectionPageCopy {
   bandClassName: string;
   /** Eyebrow colour on ivory, from the same family (CLAUDE.md §5.6: must clear 4.5:1). */
   accentClassName: string;
+  /** Blue Tea and Red Tea (client, 2026-09-20): the phone heading band is cream and the running strip
+   * takes the collection's colour — the reverse of the other collections. Names that colour. */
+  invertedStripTone?: "blue" | "red";
 }
 
 const TEA = "Tea collection";
@@ -31,6 +34,7 @@ export const COLLECTION_PAGE_COPY: Record<string, CollectionPageCopy> = {
     productsIntro: HOME_COPY.blueTeaBand.bodySecondary,
     bandClassName: "bg-brew-1",
     accentClassName: "text-brew-2",
+    invertedStripTone: "blue",
   },
   "red-tea": {
     eyebrow: TEA,
@@ -38,6 +42,7 @@ export const COLLECTION_PAGE_COPY: Record<string, CollectionPageCopy> = {
     productsIntro: HOME_COPY.redTea.body[0],
     bandClassName: "bg-hibiscus",
     accentClassName: "text-hibiscus",
+    invertedStripTone: "red",
   },
   "tea-combos": {
     eyebrow: TEA,

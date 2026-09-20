@@ -14,10 +14,12 @@
  * normally keeps this project from writing itself, and reconfirmed once more after that was
  * repeated back — the same "client's own explicit call, logged rather than re-litigated" pattern
  * §8 already uses for the banner/gallery image exceptions. This parser stays generic (it always
- * returns whatever's there, for any product), but `Details.tsx` only renders `healthBenefits` for
- * the two Blue Tea slugs specifically — every other product's own "Health Benefits" copy (Red Tea,
- * Classic/Assam, Spices) has never been confirmed by the client the same way and must stay
- * unsurfaced until it is.
+ * returns whatever's there, for any product), but `WellnessBenefits.tsx` is only rendered for the
+ * Blue Tea and Red Tea products (WELLNESS_HEADINGS in app/product/[slug]/page.tsx). Red Tea's copy
+ * was supplied verbatim by the client stakeholder on 2026-09-20 and includes specific medical claims
+ * ("Regulates blood pressure", "Lowers bad cholesterol") — written confirmation of that call is still
+ * to be logged in CLAUDE.md §8. Every other product's own "Health Benefits" copy (Classic/Assam,
+ * Spices) has never been confirmed by the client and must stay unsurfaced until it is.
  */
 
 export interface ParsedDescription {
@@ -91,5 +93,63 @@ export function parseProductDescription(description: string | null): ParsedDescr
     ingredients,
     howToUse: sections.get("Culinary Uses") ?? null,
     healthBenefits: sections.get("Health Benefits") ?? null,
+  };
+}
+
+export interface ParsedWellness {
+  /** The opening sentence — a line long enough to be prose rather than a benefit label. */
+  intro: string | null;
+  /** The short one-line benefits, in the order the client wrote them. */
+  benefits: string[];
+  /** A closing usage line (e.g. how often to drink it), when the copy ends with a long sentence. */
+  note: string | null;
+}
+
+const PROSE_LENGTH = 60;
+
+/**
+ * Splits a "Health Benefits" block (see `healthBenefits` above) into what the PDP's wellness section
+ * lays out separately: an intro sentence, one card per short benefit line, and a closing note. The
+ * client's words are passed through untouched — this only decides which line goes where, by length.
+ */
+export function parseWellnessBenefits(text: string): ParsedWellness {
+  const lines = text
+    .split("\n")
+    .map((l) => l.replace(/^[•*-]\s*/, "").trim())
+    .filter(Boolean);
+  const intro = lines.length > 1 && lines[0].length > PROSE_LENGTH ? lines.shift() ?? null : null;
+  const last = lines[lines.length - 1];
+  const note = lines.length > 2 && last.length > PROSE_LENGTH ? lines.pop() ?? null : null;
+  return { intro, benefits: lines, note };
+}
+
+export interface PlainDescription {
+  /** The prose paragraphs, in order. */
+  paragraphs: string[];
+  /** The items of a closing "Perfect for: A • B • C" line, when present. */
+  perfectFor: string[];
+}
+
+/**
+ * Splits a product description that has no "Key Characteristics"-style sections (the spice combos):
+ * blank-line separated paragraphs, optionally ending in a "Perfect for: A • B • C" line that becomes
+ * a list of tags. The client's words are passed through untouched.
+ */
+export function parsePlainDescription(description: string | null): PlainDescription {
+  const blocks = (description ?? "")
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const last = blocks[blocks.length - 1];
+  const perfect = last && /^Perfect for:/i.test(last) ? blocks.pop() : null;
+  return {
+    paragraphs: blocks,
+    perfectFor: perfect
+      ? perfect
+          .replace(/^Perfect for:\s*/i, "")
+          .split("•")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [],
   };
 }

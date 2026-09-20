@@ -11,14 +11,30 @@ export interface MarqueeItem {
  * finished list under `prefers-reduced-motion: reduce` (that media query is handled entirely in
  * the shared CSS, not per-caller).
  */
-export function MarqueeStrip({ ariaLabel, items, className }: { ariaLabel: string; items: MarqueeItem[]; className?: string }) {
+const SOLID_TONES = { blue: "border-brew-1 bg-brew-1", red: "border-hibiscus bg-hibiscus" } as const;
+
+export function MarqueeStrip({
+  ariaLabel,
+  items,
+  className,
+  tone = "cream",
+}: {
+  ariaLabel: string;
+  items: MarqueeItem[];
+  className?: string;
+  /** "cream" (default) — ivory strip, muted ink text. "blue" (deep butterfly-pea, ~9:1 white on
+   * --color-brew-1) and "red" (hibiscus, ~5.9:1 white on --color-hibiscus) — a solid collection-colour
+   * strip with white text. */
+  tone?: "cream" | "blue" | "red";
+}) {
+  const solid = tone === "cream" ? null : SOLID_TONES[tone];
   function list(ariaHidden: boolean) {
     return (
       <ul aria-hidden={ariaHidden || undefined} className={`flex shrink-0 items-center ${ariaHidden ? "trust-marquee-duplicate" : ""}`}>
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-2.5 px-6 py-3 sm:px-8">
             {item.icon}
-            <span className="whitespace-nowrap text-sm font-medium text-ink-2">{item.label}</span>
+            <span className={`whitespace-nowrap text-sm font-medium ${solid ? "text-white" : "text-ink-2"}`}>{item.label}</span>
           </li>
         ))}
       </ul>
@@ -26,7 +42,7 @@ export function MarqueeStrip({ ariaLabel, items, className }: { ariaLabel: strin
   }
 
   return (
-    <section aria-label={ariaLabel} className={`overflow-hidden border-y border-line bg-surface-2 ${className ?? ""}`}>
+    <section aria-label={ariaLabel} className={`overflow-hidden border-y ${solid ?? "border-line bg-surface-2"} ${className ?? ""}`}>
       <div className="trust-marquee-track">
         {list(false)}
         {list(true)}

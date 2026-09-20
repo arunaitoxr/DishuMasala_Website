@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Image, { type StaticImageData } from "next/image";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -28,6 +29,11 @@ export interface PageHeroProps {
   /** Token background for the copy band below the image on phones, and for an image-less hero —
    * e.g. "bg-brew-1". Must carry white text at 4.5:1. */
   bandClassName: string;
+  /** "cream" swaps the phone copy band to the ivory surface with ink text instead of `bandClassName`
+   * with white text — used where the strip below it is the collection colour (Blue Tea). */
+  bandTone?: "brand" | "cream";
+  /** Decorative layer drawn over the artwork, under the copy (e.g. the Blue Tea vine and petals). */
+  overlay?: ReactNode;
 }
 
 /**
@@ -52,15 +58,19 @@ export function PageHero({
   mobileImage,
   tone = "dark",
   bandClassName,
+  bandTone = "brand",
+  overlay,
 }: PageHeroProps) {
   const phoneImage = mobileImage ?? image;
   const isLight = tone === "light";
 
+  const creamBand = bandTone === "cream";
+
   const band = (
-    <div className={cn(bandClassName, "text-white")}>
+    <div className={creamBand ? "bg-surface-2 text-ink" : cn(bandClassName, "text-white")}>
       <div className={cn(PAGE_CONTAINER, "py-10 text-center", !image && "lg:py-20 lg:text-left")}>
         <div className={cn("mx-auto max-w-md", !image && "lg:mx-0")}>
-          <HeroCopy eyebrow={eyebrow} heading={heading} subhead={subhead} cta={cta} light={false} />
+          <HeroCopy eyebrow={eyebrow} heading={heading} subhead={subhead} cta={cta} light={creamBand} />
         </div>
       </div>
     </div>
@@ -78,6 +88,7 @@ export function PageHero({
     <section aria-label={ariaLabel} className="relative w-full">
       <div className="relative hidden h-[clamp(560px,50vw,720px)] w-full overflow-hidden lg:block">
         <Image src={image.src} alt={image.alt} fill priority sizes="100vw" className="object-cover" />
+        {overlay}
         <div
           aria-hidden="true"
           className="absolute inset-0"
@@ -101,6 +112,7 @@ export function PageHero({
             style={{ aspectRatio: `${phoneImage.width} / ${phoneImage.height}` }}
           >
             <Image src={phoneImage.src} alt={phoneImage.alt} fill priority sizes="100vw" className="object-cover" />
+            {overlay}
           </div>
         )}
         {band}
