@@ -16,7 +16,7 @@ import { variants } from "../schema";
  * free-gift menu (free-gift.ts) read them directly, so gifts and existing carts keep working.
  */
 export const GIFT_ONLY_SKUS = ["0023-20-gm", "0032-20-gm", "0030-100-gm", "0035-100-gm"];
-export const RETIRED_SKUS = ["0033-36-4PK"];
+export const RETIRED_SKUS = ["0033-36-4PK", "0023-105-gm", "0032-105-gm"];
 
 /** SQL condition: this variant row is shown on the storefront. Use in a query's WHERE or a join's ON. */
 export const notGiftOnly = notInArray(variants.sku, [...GIFT_ONLY_SKUS, ...RETIRED_SKUS]);
