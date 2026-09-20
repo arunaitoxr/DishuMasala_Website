@@ -9,6 +9,7 @@ import { getRazorpayClient } from "@/lib/razorpay/client";
 import { runOrderConfirmedSideEffects } from "@/lib/commerce/order-fulfillment";
 import { buildOrderConfirmationUrl } from "@/lib/order-token";
 import { getSessionUser } from "@/lib/auth/session";
+import { isEmailProofValid } from "@/lib/checkout-otp";
 
 function confirmationUrlFor(orderNumber: string, email: string): string {
   return buildOrderConfirmationUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000", orderNumber, email);
@@ -39,6 +40,8 @@ const checkoutSchema = z.object({
   email: z.string().trim().email().max(200),
   lines: z.array(lineSchema).min(1).max(50),
   couponCode: z.string().trim().max(40).optional().nullable(),
+  /** Issued by /api/checkout/otp/verify — proves the shopper controls `email` (client brief, 2026-09-20). */
+  emailProof: z.string().max(200),
   paymentMethod: z.enum(["razorpay", "cod"]),
   shippingAddress: addressSchema,
   billingAddress: addressSchema.optional().nullable(),
@@ -52,6 +55,7 @@ type CheckoutError =
   | { code: "invalid_input"; message: string }
   | { code: "price_mismatch"; message: string; correctedCart: Awaited<ReturnType<typeof computePricing>> }
   | { code: "cart_changed"; message: string; correctedCart: Awaited<ReturnType<typeof computePricing>> }
+  | { code: "email_unverified"; message: string }
   | { code: "empty_cart"; message: string }
   | { code: "payment_unavailable"; message: string }
   | { code: "internal_error"; message: string };
@@ -73,6 +77,12 @@ export async function POST(req: Request): Promise<NextResponse> {
     return errorResponse(400, { code: "invalid_input", message: parsed.error.issues[0]?.message ?? "Invalid checkout request." });
   }
   const input = parsed.data;
+
+  // Every order needs a verified email (client brief, 2026-09-20). Checked before anything else,
+  // including the idempotent replay, so an unverified caller can't read back an existing order.
+  if (!isEmailProofValid(input.email, input.emailProof)) {
+    return errorResponse(403, { code: "email_unverified", message: "Please verify your email address to place your order." });
+  }
 
   try {
     // Idempotent replay: an identical earlier request already produced an order for this key —
