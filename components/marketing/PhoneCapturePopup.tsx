@@ -66,7 +66,7 @@ function TruckIcon() {
  * (LUCKY10, scripts/add-lucky10-coupon.ts) in exchange for a phone number and explicit WhatsApp/SMS
  * consent (an unticked checkbox — DPDP-style consent needs to be an active choice, never assumed).
  * The benefit chips below the form state only verifiable facts already established elsewhere in
- * this project (CLAUDE.md §8) — free shipping over ₹500, COD — rather than an invented claim like
+ * this project (CLAUDE.md §8) — free shipping over ₹500 — rather than an invented claim like
  * "wellness tips" this project doesn't actually produce a cadence of.
  *
  * Suppressed for good via localStorage the moment someone either submits or closes it — a popup

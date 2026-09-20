@@ -161,7 +161,7 @@ export const COLLECTION_FAQS: Record<string, FaqItem[]> = {
   ],
 };
 
-/** Shipping/COD facts, shared across every collection — built with the LIVE free-shipping
+/** Shipping facts, shared across every collection — built with the LIVE free-shipping
  * threshold (never a hardcoded ₹500), so this is a function, not a static array. */
 export function buildSharedCommerceFaqs(freeShippingLabel: string): FaqItem[] {
   return [

@@ -10,7 +10,7 @@
  *
  * CONTENT DISCIPLINE (CLAUDE.md §8 / this phase's brief — "invent nothing"):
  * - The policy pages state ONLY verifiable facts already established elsewhere in this project:
- *   free shipping over ₹500 (settings.free_shipping_threshold_paise), COD availability, GST-
+ *   free shipping over ₹500 (settings.free_shipping_threshold_paise), GST-
  *   inclusive pricing, the real business name "Dishu Food and Beverages", the real Sangrur,
  *   Punjab address and +91 77102 19958 phone (both already used in the Phase 1 footer). GSTIN and
  *   the street address/pincode/email are rendered as the honest "to be confirmed" placeholders
@@ -66,8 +66,6 @@ const shippingPolicy: TiptapDoc = {
     p("This page explains how orders from Dishu Food and Beverages are shipped."),
     h(2, "Free shipping"),
     p("Orders over ₹500 ship free. Orders below that qualify for standard shipping at the rate shown at checkout."),
-    h(2, "Cash on delivery"),
-    p("Cash on delivery (COD) is available on eligible pincodes, shown at checkout once you enter your delivery pincode."),
     h(2, "Delivery estimates"),
     p("An estimated delivery window is shown on the product page and at checkout once you enter your pincode. This is an estimate, not a guarantee, and can vary with courier load, weather, and location."),
     h(2, "Packaging"),
@@ -90,7 +88,7 @@ const refundPolicy: TiptapDoc = {
     h(2, "Damaged or incorrect items"),
     p("If an order arrives damaged or incorrect, contact us with your order number and photos of the item as received, and we will sort out a resolution."),
     h(2, "Refund method"),
-    p("Where a refund is agreed, it is issued back to the original payment method for prepaid orders, or by the method we agree with you directly for COD orders. Processing time is not yet finalised — we will confirm it when we confirm the refund."),
+    p("Where a refund is agreed, it is issued back to the original payment method. Processing time is not yet finalised — we will confirm it when we confirm the refund."),
     ...SELLER_BLOCK,
     ...GRIEVANCE_BLOCK,
   ],
@@ -136,9 +134,9 @@ const termsOfService: TiptapDoc = {
     h(2, "Pricing"),
     p("All prices shown are inclusive of GST unless stated otherwise. Prices, discounts and availability can change without notice; the price charged is the price shown at checkout at the time your order is placed."),
     h(2, "Orders"),
-    p("Placing an order is an offer to buy, which we accept once your order is confirmed (payment captured for prepaid orders, or immediately for cash on delivery). We reserve the right to cancel an order that cannot genuinely be fulfilled, in which case any payment taken is refunded."),
+    p("Placing an order is an offer to buy, which we accept once your order is confirmed (once payment is captured). We reserve the right to cancel an order that cannot genuinely be fulfilled, in which case any payment taken is refunded."),
     h(2, "Payment"),
-    p("Prepaid orders are processed through Razorpay. Cash on delivery is available where shown at checkout."),
+    p("All orders are prepaid and processed through Razorpay."),
     h(2, "Shipping and returns"),
     p("See the Shipping Policy and Refund & Cancellation Policy pages for current terms."),
     h(2, "Product information"),

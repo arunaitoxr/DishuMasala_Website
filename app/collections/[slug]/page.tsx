@@ -75,7 +75,6 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
     "Double-layer packaging",
     `Free shipping over ${formatINR(freeShippingThresholdPaise)}`,
     ...(freeGiftThresholdPaise != null ? [`Free gift on orders above ${formatINR(freeGiftThresholdPaise)}`] : []),
-    "Cash on delivery available",
     "Sourced from the best specified areas",
   ];
 

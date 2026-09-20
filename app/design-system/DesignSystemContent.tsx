@@ -316,7 +316,7 @@ export function DesignSystemContent({ trustStrip }: DesignSystemContentProps) {
           </AccordionItem>
           <AccordionItem value="ship">
             <AccordionTrigger>Shipping & delivery</AccordionTrigger>
-            <AccordionContent>Free shipping over the site-wide threshold; COD available.</AccordionContent>
+            <AccordionContent>Free shipping over the site-wide threshold.</AccordionContent>
           </AccordionItem>
         </Accordion>
       </Section>

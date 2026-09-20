@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { computePricing } from "@/lib/commerce/pricing";
 import { defaultPricingDeps } from "@/lib/commerce/pricing-deps";
@@ -6,7 +6,6 @@ import { addressSchema } from "@/lib/commerce/address";
 import { createOrderTransaction, attachRazorpayOrderId, markOrderPaymentFailed } from "@/lib/db/mutations/orders";
 import { getOrderByIdempotencyKey, getOrderById } from "@/lib/db/queries/orders";
 import { getRazorpayClient } from "@/lib/razorpay/client";
-import { runOrderConfirmedSideEffects } from "@/lib/commerce/order-fulfillment";
 import { buildOrderConfirmationUrl } from "@/lib/order-token";
 import { getSessionUser } from "@/lib/auth/session";
 import { isEmailProofValid } from "@/lib/checkout-otp";
@@ -26,7 +25,7 @@ function confirmationUrlFor(orderNumber: string, email: string): string {
  *   4. Open one real DB transaction: insert the order + item snapshots, decrement stock, increment
  *      coupon usage. Commit.
  *   5. Only after commit: for a prepaid order, create the Razorpay order for the SERVER total; for
- *      COD, the order is already confirmed and its confirmation email is sent here.
+ *      (Cash on delivery was removed 2026-09-20 — every order is prepaid.)
  *
  * Idempotency: `idempotencyKey` is required and enforced by a real unique DB constraint
  * (orders.idempotency_key) — see lib/db/mutations/orders.ts#createOrderTransaction for how a
@@ -42,7 +41,8 @@ const checkoutSchema = z.object({
   couponCode: z.string().trim().max(40).optional().nullable(),
   /** Issued by /api/checkout/otp/verify — proves the shopper controls `email` (client brief, 2026-09-20). */
   emailProof: z.string().max(200),
-  paymentMethod: z.enum(["razorpay", "cod"]),
+  // Prepaid only — cash on delivery was removed (client, 2026-09-20), so a "cod" request is invalid.
+  paymentMethod: z.literal("razorpay"),
   shippingAddress: addressSchema,
   billingAddress: addressSchema.optional().nullable(),
   customerNote: z.string().trim().max(500).optional().nullable(),
@@ -173,31 +173,13 @@ export async function POST(req: Request): Promise<NextResponse> {
       });
     }
 
-    // COD: confirmed directly, no gateway. Email + Shiprocket push now (after commit), via
-    // `after()` so the response isn't held up by a slow provider but the work still runs to
-    // completion on Vercel's serverless runtime rather than being killed with the request.
-    if (input.paymentMethod === "cod") {
-      const order = await getOrderById(createResult.orderId);
-      if (order) after(() => runOrderConfirmedSideEffects(order));
-      return NextResponse.json({
-        ok: true,
-        replayed: false,
-        orderId: createResult.orderId,
-        orderNumber: createResult.orderNumber,
-        paymentMethod: "cod" as const,
-        razorpayOrderId: null,
-        totalPaise: pricing.totalPaise,
-        confirmationUrl: confirmationUrlFor(createResult.orderNumber, input.email),
-      });
-    }
-
     // Prepaid: create the Razorpay order for the SERVER-computed total, after commit.
     const client = getRazorpayClient();
     if (!client) {
       await markOrderPaymentFailed(createResult.orderId);
       return errorResponse(503, {
         code: "payment_unavailable",
-        message: "Online payments are temporarily unavailable. Please choose Cash on Delivery to complete your order.",
+        message: "Online payments are temporarily unavailable. Please try again in a little while.",
       });
     }
 
@@ -223,7 +205,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       await markOrderPaymentFailed(createResult.orderId);
       return errorResponse(503, {
         code: "payment_unavailable",
-        message: "We couldn't start your payment right now. Please try again, or choose Cash on Delivery.",
+        message: "We couldn't start your payment right now. Please try again.",
       });
     }
   } catch (err) {

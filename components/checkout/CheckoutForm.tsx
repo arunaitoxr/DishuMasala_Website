@@ -8,7 +8,6 @@ import { z } from "zod";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { RazorpayButton } from "./RazorpayButton";
 import { OrderSummary } from "@/components/cart/OrderSummary";
@@ -31,7 +30,7 @@ const checkoutSchema = z.object({
   city: z.string().trim().min(2, "Enter a city").max(80),
   state: z.enum(INDIAN_STATES, { message: "Choose a state" }),
   pincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
-  paymentMethod: z.enum(["razorpay", "cod"]),
+  paymentMethod: z.literal("razorpay"),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -90,7 +89,6 @@ export function CheckoutForm() {
   });
 
   const pincode = watch("pincode");
-  const paymentMethod = watch("paymentMethod");
 
   // Drives the same Shiprocket serviceability check the PDP uses (lib/shiprocket.ts), reused —
   // never duplicated — via the same server action (PROMPTS.md Phase 5 item 5).
@@ -223,13 +221,6 @@ export function CheckoutForm() {
           return;
         }
         setSubmitState({ kind: "error", message: data.error?.message ?? "Something went wrong. Please try again." });
-        return;
-      }
-
-      if (data.paymentMethod === "cod") {
-        clearAfterOrder();
-        setSubmitState({ kind: "redirecting" });
-        router.push(new URL(data.confirmationUrl).pathname + new URL(data.confirmationUrl).search);
         return;
       }
 
@@ -425,7 +416,7 @@ export function CheckoutForm() {
                   />
                 ) : (
                   <Button type="submit" variant="gradient" size="lg" loading={submitState.kind === "submitting"} disabled={itemCount === 0}>
-                    {paymentMethod === "cod" ? "Place order" : "Continue to pay"}
+                    Continue to pay
                   </Button>
                 )}
               </div>
@@ -476,8 +467,7 @@ function PincodeStatusLine({ result, pincode }: { result: ServiceabilityResult; 
     return (
       <p className="text-sm text-ok">
         Delivers to {pincode}
-        {result.etaDays != null ? ` in ~${result.etaDays} day${result.etaDays === 1 ? "" : "s"}` : ""}.{" "}
-        {result.codAvailable ? "Cash on Delivery available." : "Prepaid only for this pincode."}
+        {result.etaDays != null ? ` in ~${result.etaDays} day${result.etaDays === 1 ? "" : "s"}` : ""}.
       </p>
     );
   }
