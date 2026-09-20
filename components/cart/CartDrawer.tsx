@@ -8,6 +8,7 @@ import { VisuallyHidden } from "@/components/ui/VisuallyHidden";
 import { CartLineItem } from "./CartLineItem";
 import { CartNotices } from "./CartNotices";
 import { EmptyCart } from "./EmptyCart";
+import { FreeGiftReveal } from "./FreeGiftReveal";
 import { FreeShippingProgress } from "./FreeShippingProgress";
 import { CouponField } from "./CouponField";
 import { OrderSummary } from "./OrderSummary";
@@ -37,13 +38,14 @@ export function CartDrawer({ upsells }: { upsells: ReactNode }) {
 
   return (
     <Drawer open={isOpen} onOpenChange={(next) => (next ? open() : close())}>
-      <DrawerContent side="right" width="cart" padded={false} className="flex flex-col">
+      <DrawerContent side="right" width="cart" padded={false} showDefaultClose={false} className="flex flex-col">
         <VisuallyHidden>
           <DrawerTitle>Your cart</DrawerTitle>
           <DrawerDescription>Review items, apply a coupon and check out.</DrawerDescription>
         </VisuallyHidden>
 
-        {/* HEADER — sticky */}
+        {/* HEADER — sticky. It carries the drawer's only close button, so DrawerContent's default one
+            is switched off above (both were rendering, a double cross). */}
         <div className="flex shrink-0 items-start justify-between border-b border-line/70 px-5 py-4">
           <div>
             <h2 className="font-display text-lg font-semibold leading-none text-ink">Your cart</h2>
@@ -66,7 +68,7 @@ export function CartDrawer({ upsells }: { upsells: ReactNode }) {
         {lines.length === 0 ? (
           <div className="flex-1 overflow-y-auto px-5">
             <CartNotices />
-            <EmptyCart compact />
+            <EmptyCart compact onNavigate={close} />
           </div>
         ) : (
           <>
@@ -78,6 +80,8 @@ export function CartDrawer({ upsells }: { upsells: ReactNode }) {
                 {thresholdPaise != null && rupeesToGoPaise != null && (
                   <FreeShippingProgress subtotalPaise={subtotalPaise} thresholdPaise={thresholdPaise} rupeesToGoPaise={rupeesToGoPaise} />
                 )}
+
+                <FreeGiftReveal />
 
                 <ul>
                   {lines.map((line) => (

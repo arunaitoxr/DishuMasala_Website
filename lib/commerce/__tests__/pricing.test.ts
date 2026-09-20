@@ -107,6 +107,21 @@ const GARAM_MASALA_100GM: VariantPricingRow = {
   stockQty: null,
   imageStorageKey: null,
 };
+const BLACK_TEA_250: VariantPricingRow = {
+  variantId: 8,
+  productId: 16,
+  collectionId: 4,
+  collectionSlug: "classic-teas",
+  priority: 4,
+  productName: "Classic Tea",
+  sku: "CT-250",
+  optionValue: "250g",
+  mrpPaise: paise(12000),
+  pricePaise: paise(9500),
+  inStock: true,
+  stockQty: null,
+  imageStorageKey: null,
+};
 const BLUE_TEA_GIFT_20GM: VariantPricingRow = {
   variantId: 7,
   productId: 16,
@@ -123,7 +138,7 @@ const BLUE_TEA_GIFT_20GM: VariantPricingRow = {
   imageStorageKey: null,
 };
 
-const CATALOG = [BLUE_500, RED_250, OUT_OF_STOCK, CORIANDER_100, CORIANDER_GIFT_100GM, GARAM_MASALA_100GM, BLUE_TEA_GIFT_20GM];
+const CATALOG = [BLUE_500, RED_250, OUT_OF_STOCK, CORIANDER_100, CORIANDER_GIFT_100GM, GARAM_MASALA_100GM, BLUE_TEA_GIFT_20GM, BLACK_TEA_250];
 
 const WELCOME5: CouponRow = {
   id: 1,
@@ -470,6 +485,32 @@ describe("free gift line (2026-09-17 client rules: allowlisted SKU + not-already
   it("rejects a gift from the SAME pillar as what's already being bought (Blue Tea buyer requesting the Blue Tea gift)", async () => {
     const result = await computePricing(
       { lines: [{ variantId: 1, qty: 2 }, { variantId: 7, qty: 1, isGift: true }] }, // both Blue Tea pillar
+      fakeDeps({ getFreeGiftThresholdPaise: async () => paise(69900) }),
+    );
+    expect(result.lines.some((l) => l.isGift)).toBe(false);
+    expect(result.issues.some((i) => i.type === "gift_not_eligible")).toBe(true);
+  });
+
+  it("honours ANY allowlisted gift once the cart already holds every pillar (client rule, 2026-09-20)", async () => {
+    const result = await computePricing(
+      {
+        lines: [
+          { variantId: 1, qty: 1 }, // Blue Tea ₹500
+          { variantId: 2, qty: 1 }, // Red Tea ₹250
+          { variantId: 4, qty: 1 }, // Spices (Coriander, not a gift SKU) ₹120
+          { variantId: 8, qty: 1 }, // Black Tea ₹95
+          { variantId: 7, qty: 1, isGift: true }, // Blue Tea 20 gm gift — same pillar as a paid line, but all four are present
+        ],
+      },
+      fakeDeps({ getFreeGiftThresholdPaise: async () => paise(69900) }),
+    );
+    expect(result.lines.some((l) => l.isGift && l.variantId === 7)).toBe(true);
+    expect(result.issues).toHaveLength(0);
+  });
+
+  it("still rejects a same-pillar gift while the cart is missing a pillar", async () => {
+    const result = await computePricing(
+      { lines: [{ variantId: 1, qty: 1 }, { variantId: 2, qty: 1 }, { variantId: 8, qty: 1 }, { variantId: 7, qty: 1, isGift: true }] }, // no spices in the cart
       fakeDeps({ getFreeGiftThresholdPaise: async () => paise(69900) }),
     );
     expect(result.lines.some((l) => l.isGift)).toBe(false);

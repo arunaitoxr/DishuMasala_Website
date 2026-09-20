@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/Button";
 
 const DISMISSED_KEY = "dm_phone_popup_dismissed";
 const SHOW_DELAY_MS = 5000;
+/** How long to wait before checking again when another dialog is in the way. */
+const RETRY_DELAY_MS = 4000;
 const PHONE_PATTERN = /^[6-9]\d{9}$/;
 /** Must match scripts/add-lucky10-coupon.ts's `code` exactly — a real, working coupon (CLAUDE.md
  * §8 "invent nothing"), never a discount claim with nothing functional behind it. */
@@ -100,7 +102,17 @@ export function PhoneCapturePopup() {
     }
     if (dismissed) return;
 
-    const timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
+    // If another dialog is open when the timer fires (the "last minute add deals" popup, the cart
+    // drawer, a quick-add…) or a gift popup is about to show, wait and look again rather than stacking a second popup on top of it.
+    let timer: ReturnType<typeof setTimeout>;
+    const tryOpen = () => {
+      if (document.querySelector('[role="dialog"]') || document.body.dataset.popupPending) {
+        timer = setTimeout(tryOpen, RETRY_DELAY_MS);
+      } else {
+        setOpen(true);
+      }
+    };
+    timer = setTimeout(tryOpen, SHOW_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above: must run once on mount only
   }, []);

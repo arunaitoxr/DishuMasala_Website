@@ -180,6 +180,9 @@ const FREE_GIFT_SKUS: Record<string, GiftPillar> = {
   "0035-100-gm": "classic-teas",
 };
 
+/** How many distinct pillars the gift allowlist spans — a cart holding all of them may take any gift. */
+const GIFT_PILLAR_COUNT = new Set(Object.values(FREE_GIFT_SKUS)).size;
+
 function giftPillarOf(v: VariantPricingRow): GiftPillar | null {
   return FREE_GIFT_SKUS[v.sku] ?? null;
 }
@@ -363,7 +366,8 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
   // The free-gift line, evaluated against the REST of the cart only (never itself, and never a
   // client-supplied flag alone — CLAUDE.md §7.5): one of the real, allowlisted gift SKUs, in
   // stock, from a pillar NOT already present in the paid cart (client rule, 2026-09-17 — buying
-  // Blue Tea offers Red Tea/Spices/Black Tea as gifts, never another Blue Tea), only once the paid
+  // Blue Tea offers Red Tea/Spices/Black Tea as gifts, never another Blue Tea; unless every pillar is
+  // already in the cart, see below), only once the paid
   // subtotal above already clears the real settings threshold.
   if (giftCandidate) {
     const { variantId, qty: requestedQty } = giftCandidate;
@@ -375,10 +379,12 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
       issues.push({ type: "variant_not_found", variantId });
     } else if (!v.inStock) {
       issues.push({ type: "out_of_stock", variantId, productName: v.productName });
-    } else if (giftPillar == null || paidPillars.has(giftPillar)) {
+    } else if (giftPillar == null || (paidPillars.has(giftPillar) && paidPillars.size < GIFT_PILLAR_COUNT)) {
       // Either not one of the allowlisted gift SKUs at all, or it belongs to a pillar the shopper
       // is already buying (e.g. requesting the Blue Tea 20g gift while Blue Tea is in the cart) —
-      // both are "not a valid gift for this cart" from the shopper's point of view.
+      // both are "not a valid gift for this cart" from the shopper's point of view. The exception
+      // (client, 2026-09-20): once the cart already holds ALL the pillars there is nothing new to
+      // offer, so any allowlisted gift is honoured rather than leaving the shopper with none.
       issues.push({ type: "gift_not_eligible", variantId });
     } else {
       if (freeGiftThresholdPaise == null || regularSubtotalSoFarPaise < freeGiftThresholdPaise) {

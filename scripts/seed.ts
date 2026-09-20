@@ -199,6 +199,12 @@ async function seedSettings(catalog: Catalog): Promise<void> {
       value: toPaise(catalog.freeShippingThreshold),
     },
     {
+      // Free-gift threshold (client, 2026-09-20): a paid cart of ₹699 or more unlocks one free gift.
+      // Without this row the server never honours a gift and the popup never appears.
+      key: "free_gift_threshold_paise",
+      value: toPaise(699),
+    },
+    {
       // Real values the client has since supplied (2026-09-17, via a direct settings update —
       // this source template had drifted out of sync with the live row, and a later `db:seed`
       // rerun silently clobbered the real data back to these placeholders; keeping this template
@@ -276,7 +282,7 @@ async function main() {
 
   await seedSettings(catalog);
   console.log(
-    "  settings: 6 rows upserted (free_shipping_threshold_paise, store_address, gstin, standard_shipping_paise, announcement_bar_text, maintenance_mode)",
+    "  settings: 7 rows upserted (free_shipping_threshold_paise, free_gift_threshold_paise, store_address, gstin, standard_shipping_paise, announcement_bar_text, maintenance_mode)",
   );
 
   console.log("Seed complete.");

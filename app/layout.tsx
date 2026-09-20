@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartUpsells } from "@/components/cart/CartUpsells";
 import { FreeGiftOptionsServer } from "@/components/cart/FreeGiftOptionsServer";
+import { AddDealsPopupServer } from "@/components/cart/AddDealsPopupServer";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { AccountSync } from "@/components/auth/AccountSync";
 import { ServiceWorkerRegister } from "@/components/providers/ServiceWorkerRegister";
@@ -122,6 +123,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Footer />
               <CartDrawer upsells={<CartUpsells />} />
               <FreeGiftOptionsServer />
+              <AddDealsPopupServer />
             </WhatsAppMessageProvider>
           </ToastProvider>
         </SessionProvider>

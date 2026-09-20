@@ -78,10 +78,24 @@ export interface CartState {
   isOpen: boolean;
   isValidating: boolean;
   email: string | null;
+  /** Set on every add that should show the "last minute add deals" popup (see AddDealsPopup) — a new
+   * `seq` each time, so the popup reacts to repeat adds of the same product. Never persisted. */
+  lastAdded: { productId: number; seq: number } | null;
+  /** Registered by AddDealsPopup once mounted: given the product just added and the resulting lines,
+   * says whether the popup will show. Lets `addItem` skip opening the cart drawer in that case
+   * instead of opening it and closing it a frame later. */
+  dealsResolver: ((productId: number, lines: CartLine[]) => boolean) | null;
+  /** Bumped by `openGiftPopup()`; FreeGiftPopup opens whenever it changes ("click to reveal" in the cart). */
+  giftPopupRequests: number;
 
   open: () => void;
   close: () => void;
-  addItem: (input: AddItemInput) => Promise<void>;
+  /** Asks FreeGiftPopup to open again — for a shopper who dismissed it and wants to pick their gift now. */
+  openGiftPopup: () => void;
+  setDealsResolver: (resolver: CartState["dealsResolver"]) => void;
+  /** `skipDeals`: the add came from the deals popup itself, so it must neither re-trigger the popup
+   * nor touch the drawer. */
+  addItem: (input: AddItemInput, opts?: { skipDeals?: boolean }) => Promise<void>;
   updateQty: (variantId: number, qty: number) => Promise<void>;
   removeItem: (variantId: number) => Promise<void>;
   applyCoupon: (code: string) => Promise<void>;
@@ -129,23 +143,34 @@ async function fetchValidation(
   couponCode: string | null,
   email: string | null,
 ): Promise<{ ok: boolean; pricing: PricingResult | null }> {
-  try {
-    const res = await fetch("/api/cart/validate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty, isGift: l.isGift })),
-        couponCode,
-        email,
-      }),
-    });
-    if (!res.ok) return { ok: false, pricing: null };
-    const body = (await res.json()) as { ok: boolean; pricing?: PricingResult };
-    return { ok: body.ok, pricing: body.pricing ?? null };
-  } catch {
-    return { ok: false, pricing: null };
-  }
+  const attempt = async (): Promise<{ ok: boolean; pricing: PricingResult | null }> => {
+    try {
+      const res = await fetch("/api/cart/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty, isGift: l.isGift })),
+          couponCode,
+          email,
+        }),
+      });
+      if (!res.ok) return { ok: false, pricing: null };
+      const body = (await res.json()) as { ok: boolean; pricing?: PricingResult };
+      return { ok: body.ok, pricing: body.pricing ?? null };
+    } catch {
+      return { ok: false, pricing: null };
+    }
+  };
+  // One quick retry: a single dropped request would otherwise leave `pricing` stale until the next
+  // page load, and everything that reads it (the free-gift popup, the totals) would be wrong.
+  const first = await attempt();
+  if (first.ok && first.pricing) return first;
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  return attempt();
 }
+
+/** Bumped on every `revalidate()`; a reply is applied only if it still belongs to the latest call. */
+let validationSeq = 0;
 
 /** Turns a PricingResult's `issues` into plain-language notices, and returns the corrected line
  * list — dropping/clamping exactly what the server said needed correcting. Never silent. */
@@ -251,16 +276,33 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       isValidating: false,
       email: null,
+      lastAdded: null,
+      dealsResolver: null,
+      giftPopupRequests: 0,
 
       open: () => set({ isOpen: true }),
       close: () => set({ isOpen: false }),
+      openGiftPopup: () => set((state) => ({ giftPopupRequests: state.giftPopupRequests + 1 })),
+      setDealsResolver: (resolver) => set({ dealsResolver: resolver }),
 
-      addItem: async (input) => {
+      addItem: async (input, opts) => {
         const existing = get().lines.find((l) => l.variantId === input.variantId);
         const lines = existing
           ? get().lines.map((l) => (l.variantId === input.variantId ? { ...l, qty: l.qty + input.qty } : l))
           : [...get().lines, { ...input }];
-        set({ lines, isOpen: true });
+        if (opts?.skipDeals) {
+          set({ lines });
+        } else {
+          // The deals popup replaces the drawer opening — but only for a paid add made while the
+          // drawer is closed (an add from inside the drawer, or a gift pick, behaves as before).
+          const showDeals =
+            !input.isGift && !get().isOpen && (get().dealsResolver?.(input.productId, lines) ?? false);
+          set({
+            lines,
+            isOpen: !showDeals,
+            ...(showDeals ? { lastAdded: { productId: input.productId, seq: (get().lastAdded?.seq ?? 0) + 1 } } : {}),
+          });
+        }
         await get().revalidate();
       },
 
@@ -294,17 +336,22 @@ export const useCartStore = create<CartState>()(
 
       revalidate: async () => {
         const { lines, couponCode, email } = get();
+        const seq = ++validationSeq;
         if (lines.length === 0) {
           set({ pricing: null, isValidating: false });
           return;
         }
         set({ isValidating: true });
         const { ok, pricing } = await fetchValidation(lines, couponCode, email);
+        // A newer revalidate started while this one was in flight (quick successive adds or
+        // quantity changes). Its reply reflects the newer cart, so this older one must not overwrite
+        // it — that was leaving `pricing` (and so "is the cart over the gift threshold?") stale.
+        if (seq !== validationSeq) return;
         if (!ok || !pricing) {
           set({ isValidating: false });
           return;
         }
-        const { lines: correctedLines, notices, couponRejected } = applyPricingCorrections(lines, pricing);
+        const { lines: correctedLines, notices, couponRejected } = applyPricingCorrections(get().lines, pricing);
         set((state) => ({
           lines: correctedLines,
           pricing,

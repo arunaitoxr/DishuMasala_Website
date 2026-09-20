@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CartLineItem } from "./CartLineItem";
 import { CartNotices } from "./CartNotices";
 import { EmptyCart } from "./EmptyCart";
+import { FreeGiftReveal } from "./FreeGiftReveal";
 import { FreeShippingProgress } from "./FreeShippingProgress";
 import { CouponField } from "./CouponField";
 import { OrderSummary } from "./OrderSummary";
@@ -44,6 +45,7 @@ export function CartPageClient({ upsells, bestsellers }: { upsells: ReactNode; b
             {thresholdPaise != null && rupeesToGoPaise != null && (
               <FreeShippingProgress subtotalPaise={subtotalPaise} thresholdPaise={thresholdPaise} rupeesToGoPaise={rupeesToGoPaise} />
             )}
+            <FreeGiftReveal />
             <ul>
               {lines.map((line) => (
                 <CartLineItem key={line.variantId} line={line} />
