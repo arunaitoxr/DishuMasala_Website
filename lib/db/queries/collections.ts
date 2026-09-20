@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../index";
+import { notGiftOnly } from "./gift-only";
 import { collections, products, variants } from "../schema";
 import { paise } from "@/lib/money";
 import type { CollectionSummary } from "@/types/catalog";
@@ -32,7 +33,7 @@ export async function getCollectionsWithStats(): Promise<CollectionSummary[]> {
       products,
       and(eq(products.collectionId, collections.id), eq(products.status, "published")),
     )
-    .leftJoin(variants, eq(variants.productId, products.id))
+    .leftJoin(variants, and(eq(variants.productId, products.id), notGiftOnly))
     .groupBy(collections.id)
     .orderBy(asc(collections.priority));
 
@@ -76,7 +77,7 @@ export async function getCollectionBySlug(slug: string): Promise<CollectionSumma
       products,
       and(eq(products.collectionId, collections.id), eq(products.status, "published")),
     )
-    .leftJoin(variants, eq(variants.productId, products.id))
+    .leftJoin(variants, and(eq(variants.productId, products.id), notGiftOnly))
     .where(eq(collections.slug, slug))
     .groupBy(collections.id)
     .limit(1);

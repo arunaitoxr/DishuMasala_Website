@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, eq, exists, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "../index";
+import { notGiftOnly } from "./gift-only";
 import { collections, productImages, products, reviews, variants } from "../schema";
 import { paise } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
@@ -112,7 +113,7 @@ async function fetchShopPage(filters: ShopFilters): Promise<ShopPage> {
     })
     .from(products)
     .innerJoin(collections, eq(products.collectionId, collections.id))
-    .leftJoin(variants, eq(variants.productId, products.id))
+    .leftJoin(variants, and(eq(variants.productId, products.id), notGiftOnly))
     .where(and(...whereConditions))
     .groupBy(products.id, collections.slug, collections.title)
     .orderBy(...orderBy)

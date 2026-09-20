@@ -104,7 +104,7 @@
       "variations": [
         {
           "sku": "0023-52-gm",
-          "option": "52 gm",
+          "option": "52 Grams",
           "mrp": 299,
           "price": 269,
           "discountPct": 10,
@@ -121,26 +121,10 @@
         },
         {
           "sku": "0023-52-gm-2PK",
-          "option": "52 gm x2",
+          "option": "105 Grams",
           "mrp": 598,
           "price": 484,
           "discountPct": 19,
-          "inStock": true
-        },
-        {
-          "sku": "0023-52-gm-4PK",
-          "option": "52 gm x4",
-          "mrp": 1196,
-          "price": 861,
-          "discountPct": 28,
-          "inStock": true
-        },
-        {
-          "sku": "0023-105-gm",
-          "option": "105 gm",
-          "mrp": 549,
-          "price": 494,
-          "discountPct": 10,
           "inStock": true
         }
       ],
@@ -169,7 +153,7 @@
       "variations": [
         {
           "sku": "0033-36",
-          "option": "Starter (36 Teabags)",
+          "option": "Starter Pack: 36 tea bags",
           "mrp": 349,
           "price": 314,
           "discountPct": 10,
@@ -177,7 +161,7 @@
         },
         {
           "sku": "0033-36-2PK",
-          "option": "Value (72 Teabags)",
+          "option": "Value Pack: 72 tea bags",
           "mrp": 698,
           "price": 565,
           "discountPct": 19,
@@ -217,7 +201,7 @@
       "variations": [
         {
           "sku": "0032-52-gm",
-          "option": "52 gm",
+          "option": "52 Grams",
           "mrp": 259,
           "price": 233,
           "discountPct": 10,
@@ -234,26 +218,10 @@
         },
         {
           "sku": "0032-52-gm-2PK",
-          "option": "52 gm x2",
+          "option": "105 Grams",
           "mrp": 518,
           "price": 419,
           "discountPct": 19,
-          "inStock": true
-        },
-        {
-          "sku": "0032-52-gm-4PK",
-          "option": "52 gm x4",
-          "mrp": 1036,
-          "price": 746,
-          "discountPct": 28,
-          "inStock": true
-        },
-        {
-          "sku": "0032-105-gm",
-          "option": "105 gm",
-          "mrp": 480,
-          "price": 432,
-          "discountPct": 10,
           "inStock": true
         }
       ],
@@ -282,7 +250,7 @@
       "variations": [
         {
           "sku": "0034-500-gm",
-          "option": "500 gm",
+          "option": "500 gm * 1",
           "mrp": 279,
           "price": 200,
           "discountPct": 28,
@@ -290,18 +258,10 @@
         },
         {
           "sku": "0034-500-gm-2PK",
-          "option": "500 gm x2",
+          "option": "500 gm * 2",
           "mrp": 558,
-          "price": 360,
-          "discountPct": 35,
-          "inStock": true
-        },
-        {
-          "sku": "0034-500-gm-4PK",
-          "option": "500 gm x4",
-          "mrp": 1116,
-          "price": 640,
-          "discountPct": 43,
+          "price": 380,
+          "discountPct": 32,
           "inStock": true
         }
       ],
@@ -330,7 +290,7 @@
       "variations": [
         {
           "sku": "0031-500-gm",
-          "option": "500 gm",
+          "option": "500 gm * 1",
           "mrp": 239,
           "price": 190,
           "discountPct": 21,
@@ -338,18 +298,10 @@
         },
         {
           "sku": "0031-500-gm-2PK",
-          "option": "500 gm x2",
+          "option": "500 gm * 2",
           "mrp": 478,
-          "price": 342,
-          "discountPct": 28,
-          "inStock": true
-        },
-        {
-          "sku": "0031-500-gm-4PK",
-          "option": "500 gm x4",
-          "mrp": 956,
-          "price": 608,
-          "discountPct": 36,
+          "price": 360,
+          "discountPct": 25,
           "inStock": true
         }
       ],
@@ -378,7 +330,7 @@
       "variations": [
         {
           "sku": "0035-250-gm",
-          "option": "250 gm",
+          "option": "250 gm * 1",
           "mrp": 140,
           "price": 100,
           "discountPct": 29,
@@ -395,18 +347,10 @@
         },
         {
           "sku": "0035-250-gm-2PK",
-          "option": "250 gm x2",
+          "option": "250 gm * 2",
           "mrp": 280,
-          "price": 180,
-          "discountPct": 36,
-          "inStock": true
-        },
-        {
-          "sku": "0035-250-gm-4PK",
-          "option": "250 gm x4",
-          "mrp": 560,
-          "price": 320,
-          "discountPct": 43,
+          "price": 190,
+          "discountPct": 32,
           "inStock": true
         }
       ],
@@ -435,7 +379,7 @@
       "variations": [
         {
           "sku": "0030-250-gm",
-          "option": "250 gm",
+          "option": "250 gm * 1",
           "mrp": 120,
           "price": 95,
           "discountPct": 21,
@@ -452,18 +396,10 @@
         },
         {
           "sku": "0030-250-gm-2PK",
-          "option": "250 gm x2",
+          "option": "250 gm * 2",
           "mrp": 240,
-          "price": 171,
-          "discountPct": 29,
-          "inStock": true
-        },
-        {
-          "sku": "0030-250-gm-4PK",
-          "option": "250 gm x4",
-          "mrp": 480,
-          "price": 304,
-          "discountPct": 37,
+          "price": 180,
+          "discountPct": 25,
           "inStock": true
         }
       ],
@@ -761,18 +697,10 @@
         },
         {
           "sku": "0027-100-gm-2PK",
-          "option": "100 gm x2",
+          "option": "200 gm",
           "mrp": 368,
           "price": 297,
           "discountPct": 19,
-          "inStock": true
-        },
-        {
-          "sku": "0027-100-gm-4PK",
-          "option": "100 gm x4",
-          "mrp": 736,
-          "price": 528,
-          "discountPct": 28,
           "inStock": true
         }
       ],
@@ -808,22 +736,6 @@
           "mrp": 99,
           "price": 85,
           "discountPct": 14,
-          "inStock": true
-        },
-        {
-          "sku": "0025-100-gm-2PK",
-          "option": "100 gm x2",
-          "mrp": 198,
-          "price": 153,
-          "discountPct": 23,
-          "inStock": true
-        },
-        {
-          "sku": "0025-100-gm-4PK",
-          "option": "100 gm x4",
-          "mrp": 396,
-          "price": 272,
-          "discountPct": 31,
           "inStock": true
         },
         {
@@ -870,22 +782,6 @@
           "inStock": true
         },
         {
-          "sku": "0021-100-gm-2PK",
-          "option": "100 gm x2",
-          "mrp": 120,
-          "price": 97,
-          "discountPct": 19,
-          "inStock": true
-        },
-        {
-          "sku": "0021-100-gm-4PK",
-          "option": "100 gm x4",
-          "mrp": 240,
-          "price": 173,
-          "discountPct": 28,
-          "inStock": true
-        },
-        {
           "sku": "0021-200-gm",
           "option": "200 gm",
           "mrp": 99,
@@ -929,22 +825,6 @@
           "inStock": true
         },
         {
-          "sku": "0022-100-gm-2PK",
-          "option": "100 gm x2",
-          "mrp": 120,
-          "price": 97,
-          "discountPct": 19,
-          "inStock": true
-        },
-        {
-          "sku": "0022-100-gm-4PK",
-          "option": "100 gm x4",
-          "mrp": 240,
-          "price": 173,
-          "discountPct": 28,
-          "inStock": true
-        },
-        {
           "sku": "0022-200-gm",
           "option": "200 gm",
           "mrp": 99,
@@ -985,22 +865,6 @@
           "mrp": 55,
           "price": 48,
           "discountPct": 13,
-          "inStock": true
-        },
-        {
-          "sku": "0026-100-gm-2PK",
-          "option": "100 gm x2",
-          "mrp": 110,
-          "price": 86,
-          "discountPct": 22,
-          "inStock": true
-        },
-        {
-          "sku": "0026-100-gm-4PK",
-          "option": "100 gm x4",
-          "mrp": 220,
-          "price": 154,
-          "discountPct": 30,
           "inStock": true
         },
         {

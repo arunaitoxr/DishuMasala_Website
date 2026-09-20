@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../index";
+import { notGiftOnly } from "./gift-only";
 import { collections, productImages, products, reviews, variants } from "../schema";
 import { paise } from "@/lib/money";
 import { publicUrl } from "@/lib/storage/storage";
@@ -64,7 +65,7 @@ async function fetchPublishedProductsByCollectionSlug(slug: string): Promise<Pro
     })
     .from(products)
     .innerJoin(collections, eq(products.collectionId, collections.id))
-    .leftJoin(variants, eq(variants.productId, products.id))
+    .leftJoin(variants, and(eq(variants.productId, products.id), notGiftOnly))
     .where(and(eq(collections.slug, slug), eq(products.status, "published")))
     .orderBy(asc(products.priority), asc(products.id), asc(variants.position));
 

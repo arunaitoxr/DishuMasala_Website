@@ -1,7 +1,8 @@
 import "server-only";
 
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../index";
+import { notGiftOnly } from "./gift-only";
 import { products, productImages, variants, wishlistItems } from "../schema";
 
 export async function getWishlistProductIds(userId: number): Promise<number[]> {
@@ -28,7 +29,7 @@ export async function getWishlistCards(userId: number): Promise<WishlistCard[]> 
   if (productIds.length === 0) return [];
 
   const productRows = await db.select().from(products).where(inArray(products.id, productIds));
-  const variantRows = await db.select().from(variants).where(inArray(variants.productId, productIds));
+  const variantRows = await db.select().from(variants).where(and(inArray(variants.productId, productIds), notGiftOnly));
   const imageRows = await db
     .select()
     .from(productImages)

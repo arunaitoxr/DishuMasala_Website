@@ -16,13 +16,16 @@ describe("parseVariantOption", () => {
   it("keeps a non-count detail without a basis", () => {
     expect(parseVariantOption("Starter (1 Pack)")).toEqual({ name: "Starter", detail: "1 Pack", basis: null });
   });
-  it("reads a single weight as a single pack, per 100 g", () => {
-    expect(parseVariantOption("100 gm")).toEqual({ name: "Single pack", detail: "100 gm", basis: { units: 100, perUnits: 100, label: "100g" } });
+  it("keeps a weight option's own wording and derives per-100 g from the total weight", () => {
+    expect(parseVariantOption("52 Grams")).toEqual({ name: "52 Grams", detail: null, basis: { units: 52, perUnits: 100, label: "100g" } });
+    expect(parseVariantOption("105 Grams").basis?.units).toBe(105);
+    expect(parseVariantOption("100 gm").basis?.units).toBe(100);
   });
-  it("reads 'N gm xK' (with or without spaces) as a pack of K over the total weight", () => {
-    const expected = { name: "Pack of 4", detail: "52 gm × 4", basis: { units: 208, perUnits: 100, label: "100g" } };
-    expect(parseVariantOption("52 gm x4")).toEqual(expected);
-    expect(parseVariantOption("52 gm x 4")).toEqual(expected);
+  it("multiplies 'N gm * K' / 'x K' / '× K' by the pack count", () => {
+    for (const v of ["500 gm * 2", "500 gm x2", "500 gm x 2", "500 gm × 2"]) {
+      expect(parseVariantOption(v)).toEqual({ name: v, detail: null, basis: { units: 1000, perUnits: 100, label: "100g" } });
+    }
+    expect(parseVariantOption("500 gm * 1").basis?.units).toBe(500);
   });
   it("treats an unrecognised value as the name only", () => {
     expect(parseVariantOption("Deluxe")).toEqual({ name: "Deluxe", detail: null, basis: null });

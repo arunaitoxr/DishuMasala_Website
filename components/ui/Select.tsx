@@ -59,7 +59,9 @@ export function SelectContent({
         position={position}
         sideOffset={6}
         className={cn(
-          "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-line bg-surface shadow-lift",
+          // Capped to the room Radix says is available (and 20rem) and scrollable — with `overflow-hidden` and no
+          // height cap a long list (all 36 states/UTs at checkout) rendered off-screen and could not be scrolled.
+          "z-50 min-w-[var(--radix-select-trigger-width)] max-h-[min(20rem,var(--radix-select-content-available-height))] overflow-y-auto overscroll-contain rounded-md border border-line bg-surface shadow-lift",
           className,
         )}
         {...props}
