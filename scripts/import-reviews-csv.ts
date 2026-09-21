@@ -21,9 +21,19 @@ import { readFileSync } from "node:fs";
 import { closeScriptDb, scriptDb } from "../lib/db/script-client";
 import { products, reviews } from "../lib/db/schema";
 
+// The 250 gm / 500 gm teas no longer carry the weight in their product name (they would otherwise
+// contradict the 100 gm free gifts), so two products now share a name — the CSV's weighted names are
+// matched by slug instead.
+const SLUG_ALIASES: Record<string, string> = {
+  "classic tea 250gm": "classic-tea-250gm",
+  "classic tea 500gm": "classic-tea-500gm",
+  "premium assam tea 250gm": "premium-aasam-tea-250gm",
+  "premium assam tea 500gm": "premium-aasam-tea-500gm",
+  "premium aasam tea 250gm": "premium-aasam-tea-250gm",
+  "premium aasam tea 500gm": "premium-aasam-tea-500gm",
+};
+
 const NAME_ALIASES: Record<string, string> = {
-  "premium aasam tea 500gm": "premium assam tea 500gm",
-  "premium aasam tea 250gm": "premium assam tea 250gm",
   "blue tea + red tea duo": "blue tea + red tea (teabags)",
   "blue tea + red tea transformation combo (4 packs)": "blue tea + red tea (loose)",
   "red tea + blue tea gift combo": "red tea twin pack",
@@ -119,6 +129,12 @@ async function main(): Promise<void> {
 
   const allProducts = await scriptDb.select({ id: products.id, slug: products.slug, name: products.name }).from(products);
   const byNormalizedName = new Map(allProducts.map((p) => [p.name.trim().toLowerCase(), p]));
+  // Slug-matched CSV names go in under their own key, so they resolve to the right product even
+  // though the products' names are now identical.
+  for (const [csvName, slug] of Object.entries(SLUG_ALIASES)) {
+    const bySlug = allProducts.find((p) => p.slug === slug);
+    if (bySlug) byNormalizedName.set(csvName, bySlug);
+  }
 
   const unmatchedNames = new Set<string>();
   let inserted = 0;
