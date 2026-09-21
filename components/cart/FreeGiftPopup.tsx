@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { formatINR } from "@/lib/money";
 import { useCartStore, selectFreeGiftEligible, selectFreeGiftThresholdPaise, selectHasFreeGift } from "@/lib/store/cart";
 import type { FreeGiftOption } from "@/lib/db/queries/free-gift";
+import { pillarsOf } from "@/lib/pillars";
 
 /** The pillars a gift can come from, in the order they are listed. */
 const GIFT_PILLAR_ORDER: FreeGiftOption["pillar"][] = ["red-tea", "blue-tea", "classic-teas", "spices"];
@@ -114,7 +115,8 @@ export function FreeGiftPopup({ options }: { options: FreeGiftOption[] }) {
   // `FreeGiftOption.pillar` 1:1 by construction — no separate mapping needed; "combos" (or
   // anything else) simply never matches any pillar, same as pricing.ts's own `cartPillarOf`.
   const paidLines = (pricing?.lines ?? []).filter((l) => !l.isGift);
-  const cartPillars = new Set(paidLines.map((l) => l.collectionSlug));
+  // Combos count as the pillars they contain (lib/pillars.ts) — a Blue + Red tea combo is both teas.
+  const cartPillars = new Set(paidLines.flatMap((l) => pillarsOf(l.collectionSlug, l.productSlug)));
   const eligibleOptions = pickGiftMenu(options, cartPillars, paidLines[0]?.productId ?? 0);
 
   if (eligibleOptions.length === 0 || thresholdPaise == null) return null;

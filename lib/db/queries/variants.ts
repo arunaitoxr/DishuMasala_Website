@@ -14,6 +14,8 @@ export interface VariantPricingRow {
   /** The line's collection slug (e.g. "blue-tea", "spices") — joined here so pricing.ts can
    * classify Tea vs. Masala pillar membership (CLAUDE.md §7.2) without a second query. */
   collectionSlug: string;
+  /** The product's slug — lets pricing.ts tell which teas a tea combo contains (lib/pillars.ts). */
+  productSlug?: string;
   productName: string;
   /** The product's own priority (CLAUDE.md §7.2) — carried through pricing so display-only
    * consumers (cart upsells) can sort/filter by it without a second round trip. Never used for
@@ -43,6 +45,7 @@ export async function getVariantsForPricing(ids: number[]): Promise<VariantPrici
       productId: variants.productId,
       collectionId: products.collectionId,
       collectionSlug: collections.slug,
+      productSlug: products.slug,
       productName: products.name,
       priority: products.priority,
       sku: variants.sku,

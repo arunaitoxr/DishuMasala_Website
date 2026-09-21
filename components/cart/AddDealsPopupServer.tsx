@@ -1,19 +1,24 @@
 import { getPublishedProductsByCollectionSlug } from "@/lib/db/queries/products";
 import { DEAL_COLLECTION_SLUGS } from "@/lib/deals";
+import { pillarsOf } from "@/lib/pillars";
 import { AddDealsPopup, type DealCandidate } from "./AddDealsPopup";
 
 /** Server wrapper for AddDealsPopup — reads the four pillar collections (cached, tagged) and reduces
  * them to one lead product per pillar plus a product → pillar map. Same server/client split as
  * FreeGiftOptionsServer.tsx. */
 export async function AddDealsPopupServer() {
+  // The four pillar collections supply the products to offer; the two combo collections are read only
+  // so an add of a combo can be classified (a spice combo is "spices", a tea combo is its teas).
+  const combos = await Promise.all(["combos", "tea-combos"].map((slug) => getPublishedProductsByCollectionSlug(slug)));
   const perCollection = await Promise.all(DEAL_COLLECTION_SLUGS.map((slug) => getPublishedProductsByCollectionSlug(slug)));
 
   const candidates: DealCandidate[] = [];
-  const productCollections: Record<number, string> = {};
+  const productPillars: Record<number, string[]> = {};
+  for (const p of combos.flat()) productPillars[p.id] = pillarsOf(p.collectionSlug, p.slug);
 
   perCollection.forEach((products, i) => {
     const slug = DEAL_COLLECTION_SLUGS[i];
-    for (const p of products) productCollections[p.id] = slug;
+    for (const p of products) productPillars[p.id] = pillarsOf(slug, p.slug);
 
     // The pillar's lead product: first in the collection's own order that has something in stock.
     for (const p of products) {
@@ -43,5 +48,5 @@ export async function AddDealsPopupServer() {
   });
 
   if (candidates.length === 0) return null;
-  return <AddDealsPopup candidates={candidates} productCollections={productCollections} />;
+  return <AddDealsPopup candidates={candidates} productPillars={productPillars} />;
 }

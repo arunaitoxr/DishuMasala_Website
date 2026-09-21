@@ -31,16 +31,13 @@ export interface DealCandidate {
 export interface AddDealsPopupProps {
   /** One lead product per offered pillar. */
   candidates: DealCandidate[];
-  /** Every published product's collection in the four pillars, so an add can be mapped to its pillar. */
-  productCollections: Record<number, string>;
+  /** Every published pillar or combo product's pillars (lib/pillars.ts), so an add can be classified —
+   * a spice combo is "spices", a Blue + Red tea combo is both teas. */
+  productPillars: Record<number, string[]>;
 }
 
 /** Pages where the popup would only get in the way — the shopper is already in the cart flow. */
 const QUIET_PATHS = ["/cart", "/checkout"];
-
-function collectionOf(productId: number, map: Record<number, string>): string | undefined {
-  return map[productId];
-}
 
 /**
  * "Last minute add deals" (client brief, 2026-09-20): right after something is added to the cart, a
@@ -52,7 +49,7 @@ function collectionOf(productId: number, map: Record<number, string>): string | 
  * opens the drawer from here. Adds made from inside the popup skip the popup and the drawer. Prices
  * are only ever display: `addItem` → `revalidate()` re-prices everything on the server (CLAUDE.md §7.5).
  */
-export function AddDealsPopup({ candidates, productCollections }: AddDealsPopupProps) {
+export function AddDealsPopup({ candidates, productPillars }: AddDealsPopupProps) {
   const pathname = usePathname();
   const setDealsResolver = useCartStore((s) => s.setDealsResolver);
   const openCart = useCartStore((s) => s.open);
@@ -65,22 +62,19 @@ export function AddDealsPopup({ candidates, productCollections }: AddDealsPopupP
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
 
   const byCollection = useMemo(() => new Map(candidates.map((c) => [c.collectionSlug, c])), [candidates]);
-  const titleBySlug = useMemo(() => new Map(candidates.map((c) => [c.collectionSlug, c.collectionTitle])), [candidates]);
 
-  /** The offers for an add: the client's table for the purchased pillar, minus pillars already in the
-   * cart, minus any pillar we have no in-stock product for. */
+  /** The offers for an add: the client's table for the pillar(s) the added product counts as, minus
+   * pillars already in the cart, minus any pillar we have no in-stock product for. */
   const offersFor = useMemo(() => {
-    return (productId: number, lines: CartLine[]): { purchased: string; deals: DealCandidate[] } => {
-      const purchased = collectionOf(productId, productCollections) ?? "";
-      const inCart = new Set(
-        lines.filter((l) => !l.isGift).map((l) => collectionOf(l.productId, productCollections) ?? ""),
-      );
+    return (productId: number, lines: CartLine[]): { purchasedName: string; deals: DealCandidate[] } => {
+      const purchased = productPillars[productId] ?? [];
+      const inCart = new Set(lines.filter((l) => !l.isGift).flatMap((l) => productPillars[l.productId] ?? []));
       const deals = dealsFor(purchased, inCart)
         .map((slug) => byCollection.get(slug))
         .filter((c): c is DealCandidate => c != null);
-      return { purchased, deals };
+      return { purchasedName: lines.find((l) => l.productId === productId)?.productName ?? "", deals };
     };
-  }, [productCollections, byCollection]);
+  }, [productPillars, byCollection]);
 
   const quiet = QUIET_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
@@ -95,19 +89,19 @@ export function AddDealsPopup({ candidates, productCollections }: AddDealsPopupP
     return useCartStore.subscribe((state, prev) => {
       const added = state.lastAdded;
       if (!added || added === prev.lastAdded) return;
-      const { purchased, deals } = offersFor(added.productId, state.lines);
+      const { purchasedName, deals } = offersFor(added.productId, state.lines);
       if (deals.length === 0) {
         // Nothing to offer after all (state moved on since the resolver ran) — fall back to the drawer.
         openCart();
         return;
       }
       setOffered(deals);
-      setPurchasedTitle(titleBySlug.get(purchased) ?? "");
+      setPurchasedTitle(purchasedName);
       setAddedIds(new Set());
       setAddingId(null);
       setOpen(true);
     });
-  }, [offersFor, titleBySlug, openCart]);
+  }, [offersFor, openCart]);
 
   async function add(deal: DealCandidate) {
     setAddingId(deal.productId);

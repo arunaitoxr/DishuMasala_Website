@@ -16,10 +16,17 @@ export const DEALS_BY_PURCHASED: Record<string, readonly string[]> = {
 export const DEAL_COLLECTION_SLUGS = Object.keys(DEALS_BY_PURCHASED);
 
 /**
- * The collections to offer after `purchased` was added, minus any already in the cart. Empty when the
- * purchase isn't one of the four pillars (combos, gifts…) or there is nothing left to offer.
+ * The collections to offer after a purchase, minus any pillar already in the cart. `purchased` is every
+ * pillar the added product counts as (lib/pillars.ts) — one for a plain product, two for a Blue + Red
+ * tea combo, none for something that isn't in the four pillars. Offers for several pillars are merged in
+ * the client's table order, without repeats.
  */
-export function dealsFor(purchased: string | undefined, inCart: ReadonlySet<string>): string[] {
-  if (!purchased) return [];
-  return (DEALS_BY_PURCHASED[purchased] ?? []).filter((slug) => !inCart.has(slug));
+export function dealsFor(purchased: readonly string[], inCart: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const pillar of purchased) {
+    for (const slug of DEALS_BY_PURCHASED[pillar] ?? []) {
+      if (!inCart.has(slug) && !out.includes(slug)) out.push(slug);
+    }
+  }
+  return out;
 }

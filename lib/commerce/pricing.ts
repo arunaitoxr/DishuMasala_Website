@@ -13,6 +13,7 @@
  * assert on arithmetic alone with no database in the loop at all.
  */
 import { paise, sumPaise, type Paise } from "@/lib/money";
+import { pillarsOf, type Pillar } from "@/lib/pillars";
 import type { VariantPricingRow } from "@/lib/db/queries/variants";
 import type { CouponRow } from "@/lib/db/queries/coupons";
 import { TEA_COLLECTION_SLUGS, MASALA_COLLECTION_SLUGS } from "@/lib/nav";
@@ -51,6 +52,8 @@ export interface PricingLine {
    * without a second query; never part of any money computation. */
   priority: number;
   collectionSlug: string;
+  /** Carried so the client can classify a combo's pillars the same way the server does (lib/pillars.ts). */
+  productSlug?: string;
   sku: string;
   optionValue: string;
   mrpPaise: Paise;
@@ -163,7 +166,7 @@ function normalizeLines(lines: PricingLineInput[]): NormalizedLine[] {
 
 /** A gift's "pillar" for the exclusion rule below — Tea's three pillars (blue-tea, red-tea,
  * classic-teas) plus spices, matching `lib/db/queries/free-gift.ts`'s own `GiftPillar` type. */
-type GiftPillar = "blue-tea" | "red-tea" | "spices" | "classic-teas";
+type GiftPillar = Pillar;
 
 /** The exact SKUs the client chose as free-gift options (2026-09-17) — a fixed allowlist, not a
  * generic "any 100g spice" rule: only Coriander/Turmeric/Red Chilli (not Black Pepper or Garam
@@ -185,15 +188,6 @@ const GIFT_PILLAR_COUNT = new Set(Object.values(FREE_GIFT_SKUS)).size;
 
 function giftPillarOf(v: VariantPricingRow): GiftPillar | null {
   return FREE_GIFT_SKUS[v.sku] ?? null;
-}
-
-/** A product's own pillar, for the "don't gift what's already being bought" rule — the same three
- * tea pillars plus spices, derived from its real `collectionSlug` (no separate mapping to invent
- * or drift out of sync). */
-function cartPillarOf(collectionSlug: string): GiftPillar | null {
-  if (collectionSlug === "blue-tea" || collectionSlug === "red-tea" || collectionSlug === "classic-teas") return collectionSlug;
-  if (collectionSlug === "spices") return "spices";
-  return null; // "combos" (or anything else) has no defined gift-exclusion rule — not guessed at.
 }
 
 export interface CouponContext {
@@ -351,6 +345,7 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
       productName: v.productName,
       priority: v.priority,
       collectionSlug: v.collectionSlug,
+      productSlug: v.productSlug,
       sku: v.sku,
       optionValue: v.optionValue,
       mrpPaise: v.mrpPaise,
@@ -373,7 +368,7 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
     const { variantId, qty: requestedQty } = giftCandidate;
     const v = byId.get(variantId);
     const regularSubtotalSoFarPaise = sumPaise(lines.map((l) => l.lineTotalPaise));
-    const paidPillars = new Set(lines.map((l) => cartPillarOf(l.collectionSlug)).filter((p): p is GiftPillar => p != null));
+    const paidPillars = new Set(lines.flatMap((l) => pillarsOf(l.collectionSlug, l.productSlug)));
     const giftPillar = v ? giftPillarOf(v) : null;
     if (!v) {
       issues.push({ type: "variant_not_found", variantId });
@@ -397,6 +392,7 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
           productName: v.productName,
           priority: v.priority,
           collectionSlug: v.collectionSlug,
+          productSlug: v.productSlug,
           sku: v.sku,
           optionValue: v.optionValue,
           mrpPaise: v.mrpPaise,

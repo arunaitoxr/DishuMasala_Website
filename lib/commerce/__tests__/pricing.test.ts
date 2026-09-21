@@ -122,6 +122,22 @@ const BLACK_TEA_250: VariantPricingRow = {
   stockQty: null,
   imageStorageKey: null,
 };
+const BLUE_RED_TEA_COMBO: VariantPricingRow = {
+  variantId: 9,
+  productId: 17,
+  collectionId: 6,
+  collectionSlug: "tea-combos",
+  productSlug: "blue-tea-red-tea-teabags-combo",
+  priority: 4,
+  productName: "Blue Tea + Red Tea",
+  sku: "BR-COMBO",
+  optionValue: "72 teabags",
+  mrpPaise: paise(90000),
+  pricePaise: paise(80000),
+  inStock: true,
+  stockQty: null,
+  imageStorageKey: null,
+};
 const BLUE_TEA_GIFT_20GM: VariantPricingRow = {
   variantId: 7,
   productId: 16,
@@ -138,7 +154,7 @@ const BLUE_TEA_GIFT_20GM: VariantPricingRow = {
   imageStorageKey: null,
 };
 
-const CATALOG = [BLUE_500, RED_250, OUT_OF_STOCK, CORIANDER_100, CORIANDER_GIFT_100GM, GARAM_MASALA_100GM, BLUE_TEA_GIFT_20GM, BLACK_TEA_250];
+const CATALOG = [BLUE_500, RED_250, OUT_OF_STOCK, CORIANDER_100, CORIANDER_GIFT_100GM, GARAM_MASALA_100GM, BLUE_TEA_GIFT_20GM, BLACK_TEA_250, BLUE_RED_TEA_COMBO];
 
 const WELCOME5: CouponRow = {
   id: 1,
@@ -506,6 +522,15 @@ describe("free gift line (2026-09-17 client rules: allowlisted SKU + not-already
     );
     expect(result.lines.some((l) => l.isGift && l.variantId === 7)).toBe(true);
     expect(result.issues).toHaveLength(0);
+  });
+
+  it("counts a tea combo as the teas it contains (a Blue + Red combo blocks the Blue Tea gift, allows Coriander)", async () => {
+    const deps = fakeDeps({ getFreeGiftThresholdPaise: async () => paise(69900) });
+    const blueGift = await computePricing({ lines: [{ variantId: 9, qty: 1 }, { variantId: 7, qty: 1, isGift: true }] }, deps);
+    expect(blueGift.lines.some((l) => l.isGift)).toBe(false);
+    expect(blueGift.issues.some((i) => i.type === "gift_not_eligible")).toBe(true);
+    const spiceGift = await computePricing({ lines: [{ variantId: 9, qty: 1 }, { variantId: 5, qty: 1, isGift: true }] }, deps);
+    expect(spiceGift.lines.some((l) => l.isGift && l.variantId === 5)).toBe(true);
   });
 
   it("still rejects a same-pillar gift while the cart is missing a pillar", async () => {
