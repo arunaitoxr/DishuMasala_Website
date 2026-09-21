@@ -20,7 +20,7 @@ export async function AddDealsPopupServer() {
     const slug = DEAL_COLLECTION_SLUGS[i];
     for (const p of products) productPillars[p.id] = pillarsOf(slug, p.slug);
 
-    // The pillar's lead product: first in the collection's own order that has something in stock.
+    // Every in-stock product of the pillar is a candidate; the popup picks one at random per opening.
     for (const p of products) {
       const inStock = p.variants.filter((v) => v.inStock);
       if (inStock.length === 0) continue;
@@ -43,7 +43,6 @@ export async function AddDealsPopupServer() {
         },
         variantCount: inStock.length,
       });
-      break;
     }
   });
 

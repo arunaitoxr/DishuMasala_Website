@@ -29,7 +29,7 @@ export interface DealCandidate {
 }
 
 export interface AddDealsPopupProps {
-  /** One lead product per offered pillar. */
+  /** Every in-stock product of each pillar — one is picked at random per pillar each time the popup opens. */
   candidates: DealCandidate[];
   /** Every published pillar or combo product's pillars (lib/pillars.ts), so an add can be classified —
    * a spice combo is "spices", a Blue + Red tea combo is both teas. */
@@ -61,7 +61,11 @@ export function AddDealsPopup({ candidates, productPillars }: AddDealsPopupProps
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
 
-  const byCollection = useMemo(() => new Map(candidates.map((c) => [c.collectionSlug, c])), [candidates]);
+  const byCollection = useMemo(() => {
+    const map = new Map<string, DealCandidate[]>();
+    for (const c of candidates) map.set(c.collectionSlug, [...(map.get(c.collectionSlug) ?? []), c]);
+    return map;
+  }, [candidates]);
 
   /** The offers for an add: the client's table for the pillar(s) the added product counts as, minus
    * pillars already in the cart, minus any pillar we have no in-stock product for. */
@@ -70,7 +74,11 @@ export function AddDealsPopup({ candidates, productPillars }: AddDealsPopupProps
       const purchased = productPillars[productId] ?? [];
       const inCart = new Set(lines.filter((l) => !l.isGift).flatMap((l) => productPillars[l.productId] ?? []));
       const deals = dealsFor(purchased, inCart)
-        .map((slug) => byCollection.get(slug))
+        // A different product of the pillar each time the popup opens, not always the first.
+        .map((slug) => {
+          const pool = byCollection.get(slug);
+          return pool && pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : undefined;
+        })
         .filter((c): c is DealCandidate => c != null);
       return { purchasedName: lines.find((l) => l.productId === productId)?.productName ?? "", deals };
     };

@@ -9,34 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { formatINR } from "@/lib/money";
 import { useCartStore, selectFreeGiftEligible, selectFreeGiftThresholdPaise, selectHasFreeGift } from "@/lib/store/cart";
 import type { FreeGiftOption } from "@/lib/db/queries/free-gift";
+import { pickGiftMenu } from "@/lib/gift-menu";
 import { pillarsOf } from "@/lib/pillars";
-
-/** The pillars a gift can come from, in the order they are listed. */
-const GIFT_PILLAR_ORDER: FreeGiftOption["pillar"][] = ["red-tea", "blue-tea", "classic-teas", "spices"];
-
-/**
- * The gift menu: at most three items, one per pillar the shopper is NOT already buying — buying Red Tea
- * shows the Blue Tea 20 gm, Black Tea 100 gm and a spice (client brief, 2026-09-20). Where a pillar has
- * several allowed gifts (three spices, two black teas) one is shown, chosen from the first paid product
- * in the cart, so the spice on offer differs by what was bought but never flips on a re-render.
- *
- * When the cart already holds every pillar there is nothing "new" to exclude, so three of the four are
- * shown anyway (which three rotates with that same seed) — the server accepts any gift in that case.
- */
-function pickGiftMenu(options: FreeGiftOption[], cartPillars: ReadonlySet<string>, seedProductId: number): FreeGiftOption[] {
-  const allInCart = GIFT_PILLAR_ORDER.every((p) => cartPillars.has(p));
-  const pillars = allInCart
-    ? GIFT_PILLAR_ORDER.map((_, i) => GIFT_PILLAR_ORDER[(i + seedProductId) % GIFT_PILLAR_ORDER.length])
-    : GIFT_PILLAR_ORDER.filter((p) => !cartPillars.has(p));
-
-  const menu: FreeGiftOption[] = [];
-  for (const pillar of pillars) {
-    const inPillar = options.filter((o) => o.pillar === pillar && o.inStock).sort((a, b) => a.variantId - b.variantId);
-    if (inPillar.length === 0) continue;
-    menu.push(inPillar[seedProductId % inPillar.length]);
-  }
-  return menu.slice(0, 3);
-}
 
 /**
  * The "choose your free gift" popup (client rule, 2026-09-17) — appears once per cart session the
@@ -63,6 +37,9 @@ export function FreeGiftPopup({ options }: { options: FreeGiftOption[] }) {
   const [open, setOpen] = useState(false);
   const [addingVariantId, setAddingVariantId] = useState<number | null>(null);
   const hasOfferedThisSession = useRef(false);
+  // Re-rolled each time the popup opens, so the spice / black tea on offer differs from one opening to the
+  // next but stays put while it is open (see lib/gift-menu.ts).
+  const [menuSeed, setMenuSeed] = useState(1);
   // The gift just picked — while set, the popup shows a short "gift added" celebration (confetti
   // behind it) before closing itself.
   const [chosen, setChosen] = useState<FreeGiftOption | null>(null);
@@ -92,6 +69,7 @@ export function FreeGiftPopup({ options }: { options: FreeGiftOption[] }) {
       } else {
         hasOfferedThisSession.current = true;
         delete document.body.dataset.popupPending;
+        setMenuSeed(Math.floor(Math.random() * 1e9));
         setOpen(true);
       }
     };
@@ -105,7 +83,10 @@ export function FreeGiftPopup({ options }: { options: FreeGiftOption[] }) {
   // "Click to reveal" in the cart asks for the popup again.
   useEffect(() => {
     return useCartStore.subscribe((state, prev) => {
-      if (state.giftPopupRequests !== prev.giftPopupRequests) setOpen(true);
+      if (state.giftPopupRequests !== prev.giftPopupRequests) {
+        setMenuSeed(Math.floor(Math.random() * 1e9));
+        setOpen(true);
+      }
     });
   }, []);
 
@@ -117,7 +98,7 @@ export function FreeGiftPopup({ options }: { options: FreeGiftOption[] }) {
   const paidLines = (pricing?.lines ?? []).filter((l) => !l.isGift);
   // Combos count as the pillars they contain (lib/pillars.ts) — a Blue + Red tea combo is both teas.
   const cartPillars = new Set(paidLines.flatMap((l) => pillarsOf(l.collectionSlug, l.productSlug)));
-  const eligibleOptions = pickGiftMenu(options, cartPillars, paidLines[0]?.productId ?? 0);
+  const eligibleOptions = pickGiftMenu(options, cartPillars, menuSeed);
 
   if (eligibleOptions.length === 0 || thresholdPaise == null) return null;
 
