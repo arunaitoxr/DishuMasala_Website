@@ -425,7 +425,7 @@ export function CheckoutForm() {
         </Accordion>
       </form>
 
-      <aside className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 lg:sticky lg:top-24 lg:self-start">
+      <aside className="flex flex-col gap-4 rounded-lg border border-line bg-transparent p-5 lg:sticky lg:top-24 lg:self-start">
         <h2 className="font-display text-lg font-semibold text-ink">Order summary ({itemCount})</h2>
         <CouponField />
         <OrderSummary pricing={pricing} />

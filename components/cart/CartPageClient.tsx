@@ -53,7 +53,7 @@ export function CartPageClient({ upsells, bestsellers }: { upsells: ReactNode; b
             </ul>
           </div>
 
-          <aside className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-5 lg:sticky lg:top-24 lg:self-start">
+          <aside className="flex flex-col gap-5 rounded-lg border border-line bg-transparent p-5 lg:sticky lg:top-24 lg:self-start">
             <CouponField />
             <OrderSummary pricing={pricing} />
             <Button asChild variant="gradient" size="lg">

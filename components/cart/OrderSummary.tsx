@@ -10,7 +10,7 @@ export function OrderSummary({ pricing }: { pricing: PricingResult | null }) {
   }
 
   return (
-    <dl className="flex flex-col gap-2 text-sm">
+  <dl className="flex flex-col gap-2 text-sm">
       <div className="flex justify-between">
         <dt className="text-ink-2">Subtotal</dt>
         <dd className="tabular-nums text-ink">{formatINR(pricing.subtotalPaise)}</dd>
