@@ -32,6 +32,7 @@
     "migrate-homepage-banners": "tsx --env-file-if-exists=.env scripts/migrate-homepage-banners.ts",
     "migrate-category-circles": "tsx --env-file-if-exists=.env scripts/migrate-category-circles.ts",
     "create-staff-user": "tsx --env-file-if-exists=.env scripts/create-staff-user.ts",
+    "create-customer-user": "tsx --env-file-if-exists=.env scripts/create-customer-user.ts",
     "add-lucky10-coupon": "tsx --env-file-if-exists=.env scripts/add-lucky10-coupon.ts",
     "cleanup-test-data": "tsx --env-file-if-exists=.env scripts/cleanup-test-data.ts",
     "import-reviews-csv": "tsx --env-file-if-exists=.env scripts/import-reviews-csv.ts",
