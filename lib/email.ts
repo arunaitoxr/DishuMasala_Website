@@ -24,7 +24,7 @@ import CheckoutOtpEmail from "@/emails/CheckoutOtp";
 import ResetPasswordEmail from "@/emails/ResetPassword";
 import type { Order } from "@/types/order";
 
-const FROM_ADDRESS = process.env.EMAIL_FROM || "Dishu Food and Beverages <orders@dishumasala.com>";
+const FROM_ADDRESS = process.env.EMAIL_FROM || "Dishu Food and Beverages <orders@dishumasala.in>";
 
 export interface EmailSendResult {
   ok: boolean;
