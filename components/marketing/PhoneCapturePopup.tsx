@@ -92,7 +92,9 @@ export function PhoneCapturePopup() {
   // the rest of the visit. `pathname` is read once, from the closure captured at mount, which is
   // exactly the page this visitor actually landed on.
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/account")) return;
+    // Also skipped on /checkout: this popup was appearing mid-checkout and covering the
+    // "Continue to payment"/"Continue to pay" buttons — a real reported blocker, not just noise.
+    if (pathname.startsWith("/admin") || pathname.startsWith("/account") || pathname.startsWith("/checkout")) return;
 
     let dismissed = false;
     try {
