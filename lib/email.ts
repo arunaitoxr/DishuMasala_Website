@@ -20,7 +20,6 @@ import OrderDeliveredEmail from "@/emails/OrderDelivered";
 import OrderCancelledEmail from "@/emails/OrderCancelled";
 import NewOrderReceivedEmail from "@/emails/NewOrderReceived";
 import VerifyEmail from "@/emails/VerifyEmail";
-import CheckoutOtpEmail from "@/emails/CheckoutOtp";
 import ResetPasswordEmail from "@/emails/ResetPassword";
 import type { Order } from "@/types/order";
 
@@ -104,8 +103,4 @@ export async function sendVerifyEmail(to: string, name: string, verifyUrl: strin
 
 export async function sendResetPasswordEmail(to: string, name: string, resetUrl: string): Promise<EmailSendResult> {
   return send(to, "Reset your password — Dishu Masala", ResetPasswordEmail({ resetUrl, name }), "reset-password");
-}
-
-export async function sendCheckoutOtpEmail(to: string, code: string): Promise<EmailSendResult> {
-  return send(to, `${code} is your Dishu Masala verification code`, CheckoutOtpEmail({ code }), "checkout-otp");
 }

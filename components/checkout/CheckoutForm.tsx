@@ -61,17 +61,6 @@ export function CheckoutForm() {
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: "idle" });
   const [pincodeStatus, setPincodeStatus] = useState<{ pincode: string; result: ServiceabilityResult } | null>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  // Email OTP (client brief, 2026-09-20): `otp.proof` is what /api/checkout requires, and only ever
-  // holds for the address it was issued to — editing the email drops it.
-  const [otp, setOtp] = useState<{
-    verifiedEmail: string | null;
-    proof: string | null;
-    challenge: string | null;
-    code: string;
-    busy: boolean;
-    message: string | null;
-    sentTo: string | null;
-  }>({ verifiedEmail: null, proof: null, challenge: null, code: "", busy: false, message: null, sentTo: null });
   const formId = useId();
 
   const {
@@ -111,10 +100,6 @@ export function CheckoutForm() {
   const goToStep = async (target: Step) => {
     if (target === "address") {
       if (!(await trigger(CONTACT_FIELDS))) return;
-      if (!otpVerified) {
-        setOtp((o) => ({ ...o, message: "Verify your email with the code we send you to continue." }));
-        return;
-      }
       // Set the cart's guest identity as soon as it's known (not only at final submit) — coupon
       // rules like WELCOME5's first-order-only check (lib/commerce/pricing.ts) need an email to
       // evaluate at all, and the coupon field is reachable from here on (checkout's sticky
@@ -126,56 +111,9 @@ export function CheckoutForm() {
     setStep(target);
   };
 
-  const emailValue = watch("email") ?? "";
-  const otpVerified = otp.proof != null && otp.verifiedEmail === emailValue.trim().toLowerCase();
-
-  async function sendCode() {
-    if (!(await trigger("email"))) return;
-    const email = getValues("email").trim();
-    setOtp((o) => ({ ...o, busy: true, message: null }));
-    try {
-      const res = await fetch("/api/checkout/otp/send", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.message ?? "Couldn't send the code.");
-      setOtp((o) => ({ ...o, busy: false, challenge: data.challenge, sentTo: email.toLowerCase(), code: "", message: `We've emailed a 6-digit code to ${email}.` }));
-    } catch (err) {
-      setOtp((o) => ({ ...o, busy: false, message: err instanceof Error ? err.message : "Couldn't send the code." }));
-    }
-  }
-
-  async function verifyCode() {
-    const email = getValues("email").trim();
-    if (!otp.challenge || !/^\d{6}$/.test(otp.code)) {
-      setOtp((o) => ({ ...o, message: "Enter the 6-digit code." }));
-      return;
-    }
-    setOtp((o) => ({ ...o, busy: true, message: null }));
-    try {
-      const res = await fetch("/api/checkout/otp/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, code: otp.code, challenge: otp.challenge }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.message ?? "That code didn't work.");
-      setOtp((o) => ({ ...o, busy: false, proof: data.proof, verifiedEmail: email.toLowerCase(), message: null }));
-    } catch (err) {
-      setOtp((o) => ({ ...o, busy: false, message: err instanceof Error ? err.message : "That code didn't work." }));
-    }
-  }
-
   const clientTotalPaise = pricing?.totalPaise ?? null;
 
   const onPlaceOrder = handleSubmit(async (values) => {
-    if (!otpVerified || !otp.proof) {
-      setStep("contact");
-      setSubmitState({ kind: "error", message: "Please verify your email address to place your order." });
-      return;
-    }
     if (lines.length === 0 || clientTotalPaise == null) {
       setSubmitState({ kind: "error", message: "Your cart is empty." });
       return;
@@ -186,7 +124,6 @@ export function CheckoutForm() {
     const body = {
       idempotencyKey,
       email: values.email,
-      emailProof: otp.proof,
       lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty })),
       couponCode,
       paymentMethod: values.paymentMethod,
@@ -272,46 +209,9 @@ export function CheckoutForm() {
                 <Field id="checkout-phone" label="Mobile number" error={errors.phone?.message}>
                   <Input id="checkout-phone" type="tel" inputMode="numeric" autoComplete="tel" maxLength={10} invalid={!!errors.phone} {...register("phone")} />
                 </Field>
+                <p className="text-xs text-ink-2">No account needed — your order confirmation will be sent to this email.</p>
 
-                {otpVerified ? (
-                  <p role="status" className="flex items-center gap-2 text-sm font-medium text-ok">
-                    <span aria-hidden="true">✓</span> Email verified — your order confirmation will be sent to {emailValue.trim()}.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2/60 p-3">
-                    <p className="text-sm text-ink-2">
-                      We&apos;ll email you a code to verify your address. Your order confirmation goes to the same email.
-                    </p>
-                    {otp.challenge && otp.sentTo === emailValue.trim().toLowerCase() && (
-                      <div className="flex gap-2">
-                        <Input
-                          aria-label="6-digit verification code"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          maxLength={6}
-                          placeholder="6-digit code"
-                          value={otp.code}
-                          onChange={(e) => setOtp((o) => ({ ...o, code: e.target.value.replace(/\D/g, "") }))}
-                        />
-                        <Button type="button" variant="solid-ink" size="md" loading={otp.busy} onClick={() => void verifyCode()}>
-                          Verify
-                        </Button>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3">
-                      <Button type="button" variant="outline" size="sm" loading={otp.busy && !otp.code} onClick={() => void sendCode()}>
-                        {otp.challenge && otp.sentTo === emailValue.trim().toLowerCase() ? "Resend code" : "Send code"}
-                      </Button>
-                    </div>
-                    {otp.message && (
-                      <p role="status" aria-live="polite" className="text-xs text-ink-2">
-                        {otp.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <Button type="button" variant="solid-ink" size="md" className="self-start" disabled={!otpVerified} onClick={() => void goToStep("address")}>
+                <Button type="button" variant="solid-ink" size="md" className="self-start" onClick={() => void goToStep("address")}>
                   Continue to address
                 </Button>
               </div>

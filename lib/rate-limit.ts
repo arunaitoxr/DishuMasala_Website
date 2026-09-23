@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { countRecentAuthAttempts } from "@/lib/db/queries/auth-attempts";
 import { recordAuthAttempt } from "@/lib/db/mutations/auth-attempts";
 
-export type RateLimitAction = "login" | "register" | "reset_request" | "reset_confirm" | "guest_order_lookup" | "checkout_otp_send" | "checkout_otp_verify";
+export type RateLimitAction = "login" | "register" | "reset_request" | "reset_confirm" | "guest_order_lookup";
 
 function hashIdentifier(kind: "ip" | "email", value: string): string {
   return createHash("sha256").update(`${kind}:${value.trim().toLowerCase()}`).digest("hex");
@@ -33,9 +33,6 @@ const RULES: Record<RateLimitAction, RateLimitRule> = {
   reset_request: { windowMinutes: 60, maxAttempts: 5 },
   reset_confirm: { windowMinutes: 60, maxAttempts: 10 },
   guest_order_lookup: { windowMinutes: 15, maxAttempts: 10 },
-  // Checkout OTP: a handful of emails per address, and a bound on code guesses (1M possible codes).
-  checkout_otp_send: { windowMinutes: 15, maxAttempts: 5 },
-  checkout_otp_verify: { windowMinutes: 15, maxAttempts: 8 },
 };
 
 async function countRecent(action: RateLimitAction, identifierHash: string, windowMinutes: number): Promise<number> {
