@@ -16,7 +16,9 @@ import { getOrderById } from "@/lib/db/queries/orders";
 import { getStoreAddress } from "@/lib/db/queries/settings";
 import { pushOrderToShiprocket } from "@/lib/shiprocket";
 import { sendOrderConfirmationEmail, sendNewOrderStaffEmail } from "@/lib/email";
+import { sendOrderConfirmationWhatsApp } from "@/lib/whatsapp";
 import { buildOrderConfirmationUrl } from "@/lib/order-token";
+import { formatINR } from "@/lib/money";
 import type { Order } from "@/types/order";
 
 function siteUrl(): string {
@@ -44,6 +46,13 @@ export async function runOrderConfirmedSideEffects(order: Order): Promise<void> 
   const confirmationUrl = buildOrderConfirmationUrl(siteUrl(), order.orderNumber, order.email);
   await sendOrderConfirmationEmail(order, confirmationUrl);
   await notifyStaffOfNewOrder(order);
+  // Never blocks/throws — see lib/whatsapp.ts's own degrade-honestly contract, same as email above.
+  await sendOrderConfirmationWhatsApp({
+    phone: order.phone,
+    customerName: order.shippingAddress.name,
+    orderNumber: order.orderNumber,
+    totalFormatted: formatINR(order.totalPaise),
+  });
 
   const push = await pushOrderToShiprocket({
     orderNumber: order.orderNumber,
