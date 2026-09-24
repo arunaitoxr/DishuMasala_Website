@@ -139,7 +139,10 @@ export function CheckoutForm() {
     const body = {
       idempotencyKey,
       email: values.email,
-      lines: fresh.lines.map((l) => ({ variantId: l.variantId, qty: l.qty })),
+      // `isGift` must round-trip to /api/checkout the same way it does to /api/cart/validate —
+      // dropping it here made a free-gift line arrive as an ordinary paid one, priced at full cost,
+      // so its total never matched the client's and every gift-bearing order was rejected outright.
+      lines: fresh.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, isGift: l.isGift })),
       couponCode: fresh.couponCode,
       paymentMethod: values.paymentMethod,
       shippingAddress: {

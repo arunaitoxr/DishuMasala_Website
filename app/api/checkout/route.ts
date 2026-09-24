@@ -31,7 +31,15 @@ function confirmationUrlFor(orderNumber: string, email: string): string {
  * concurrent duplicate is resolved to the same order row rather than erroring or duplicating.
  */
 
-const lineSchema = z.object({ variantId: z.number().int().positive(), qty: z.number().int().positive().max(99) });
+// `isGift` must round-trip the same way it does for /api/cart/validate (CLAUDE.md §7.5): without
+// it, a genuine free-gift line arrives here indistinguishable from an ordinary paid one, gets
+// priced at full cost by computePricing, and its total will never match what the client displayed
+// — rejecting every order that has a gift in it as a false "price mismatch"/"cart changed".
+const lineSchema = z.object({
+  variantId: z.number().int().positive(),
+  qty: z.number().int().positive().max(99),
+  isGift: z.boolean().optional(),
+});
 
 const checkoutSchema = z.object({
   idempotencyKey: z.string().min(8).max(128),
