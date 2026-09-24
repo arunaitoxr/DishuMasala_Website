@@ -65,7 +65,8 @@ function buildCheckoutBody(overrides: Record<string, unknown> = {}) {
     idempotencyKey: randomUUID(),
     email: `integration-test-${suffix}@example.com`,
     lines: [{ variantId: testVariantId, qty: 1 }],
-    paymentMethod: "cod" as const,
+    // Cash on delivery was removed (CLAUDE.md §7.1) — every order is prepaid via Razorpay now.
+    paymentMethod: "razorpay" as const,
     shippingAddress: {
       name: "Test Shopper",
       phone: "9876543210",

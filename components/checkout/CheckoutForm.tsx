@@ -121,11 +121,26 @@ export function CheckoutForm() {
     setEmail(values.email);
     setSubmitState({ kind: "submitting" });
 
+    // Force one last, blocking revalidate() right before building the request — a real bug fix
+    // (2026-09-24): `pricing`/`lines` here were whatever the store last happened to hold, which
+    // could still be mid-flight from an earlier revalidate() (e.g. the one fired on the Address
+    // step, or on page load from a rehydrated cart) if the shopper clicked through quickly. That
+    // raced the server's own recompute and could send a `clientTotalPaise` the server had already
+    // moved past, rejecting a perfectly good order as "cart changed"/"price mismatch". Reading
+    // fresh from the store (not the possibly-stale closed-over `lines`/`pricing`) after this
+    // completes guarantees the request reflects exactly what the server just confirmed.
+    await revalidate();
+    const fresh = useCartStore.getState();
+    if (fresh.lines.length === 0 || fresh.pricing == null) {
+      setSubmitState({ kind: "error", message: "Your cart is empty." });
+      return;
+    }
+
     const body = {
       idempotencyKey,
       email: values.email,
-      lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty })),
-      couponCode,
+      lines: fresh.lines.map((l) => ({ variantId: l.variantId, qty: l.qty })),
+      couponCode: fresh.couponCode,
       paymentMethod: values.paymentMethod,
       shippingAddress: {
         name: values.name,
@@ -137,7 +152,7 @@ export function CheckoutForm() {
         pincode: values.pincode,
       },
       customerNote: null,
-      clientTotalPaise,
+      clientTotalPaise: fresh.pricing.totalPaise,
     };
 
     try {
