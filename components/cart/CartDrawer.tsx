@@ -95,20 +95,22 @@ export function CartDrawer({ upsells }: { upsells: ReactNode }) {
               </div>
             </div>
 
-            {/* FOOTER — sticky */}
-            <div className="shrink-0 border-t border-line/70 px-5 py-4">
-              <OrderSummary pricing={pricing} />
-              <Button asChild variant="gradient" size="lg" onClick={close} className="mt-4 w-full">
+            {/* FOOTER — sticky. Client request (2026-09-24): compacted (smaller Total, tighter
+                spacing, a "md" not "lg" CTA) so this block takes less of the drawer's height,
+                especially with a long cart above it. */}
+            <div className="shrink-0 border-t border-line/70 px-5 py-3">
+              <OrderSummary pricing={pricing} compact />
+              <Button asChild variant="gradient" size="md" onClick={close} className="mt-3 w-full">
                 <Link href="/checkout/">Proceed to checkout</Link>
               </Button>
               <Link
                 href="/cart/"
                 onClick={close}
-                className="mt-2.5 block text-center text-sm font-medium text-ink-2 underline underline-offset-4 hover:text-ink"
+                className="mt-2 block text-center text-xs font-medium text-ink-2 underline underline-offset-4 hover:text-ink"
               >
                 View full cart
               </Link>
-              <TrustIndicators className="mt-4" />
+              <TrustIndicators className="mt-2.5" />
             </div>
           </>
         )}

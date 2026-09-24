@@ -1,16 +1,20 @@
+import { cn } from "@/lib/cn";
 import { formatINR } from "@/lib/money";
 import type { PricingResult } from "@/lib/commerce/pricing";
 
 /** The subtotal/discount/shipping/total breakdown — rendered only from what the server last
  * confirmed (`pricing`), never computed here (CLAUDE.md §7.5). `null` (before the first
- * revalidation resolves) renders nothing rather than a guessed number. */
-export function OrderSummary({ pricing }: { pricing: PricingResult | null }) {
+ * revalidation resolves) renders nothing rather than a guessed number.
+ *
+ * `compact` (client request, 2026-09-24) shrinks just the Total row's size/spacing — used only by
+ * the cart drawer, whose sticky footer has less room than the full /cart page or checkout. */
+export function OrderSummary({ pricing, compact = false }: { pricing: PricingResult | null; compact?: boolean }) {
   if (!pricing) {
     return <p className="text-sm text-ink-2">Calculating your total…</p>;
   }
 
   return (
-  <dl className="flex flex-col gap-2 text-sm">
+    <dl className="flex flex-col gap-2 text-sm">
       <div className="flex justify-between">
         <dt className="text-ink-2">Subtotal</dt>
         <dd className="tabular-nums text-ink">{formatINR(pricing.subtotalPaise)}</dd>
@@ -31,7 +35,12 @@ export function OrderSummary({ pricing }: { pricing: PricingResult | null }) {
         <dt className="text-ink-2">Shipping</dt>
         <dd className="tabular-nums text-ink">{pricing.shippingPaise > 0 ? formatINR(pricing.shippingPaise) : "Free"}</dd>
       </div>
-      <div className="mt-1 flex justify-between border-t border-line pt-2.5 text-base font-semibold">
+      <div
+        className={cn(
+          "flex justify-between border-t border-line font-semibold",
+          compact ? "mt-0.5 pt-2 text-sm" : "mt-1 pt-2.5 text-base",
+        )}
+      >
         <dt className="text-ink">Total</dt>
         <dd className="tabular-nums text-ink">{formatINR(pricing.totalPaise)}</dd>
       </div>
