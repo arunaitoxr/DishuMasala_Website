@@ -8,27 +8,28 @@ import { Input } from "@/components/ui/Input";
 export type DangerResult = { ok: true; message: string } | { ok: false; error: string };
 
 /**
- * A destructive admin action behind a typed confirmation (CLAUDE.md §9: "Destructive actions need
- * typed confirmation"). Staff must type `confirmText` exactly — a code, a slug, a name — before the
- * action button enables; a stray click can never delete anything. The action runs on the server and
- * reports back; on success `onDone` decides where to go (usually back to the list).
+ * The typed-confirmation dialog behind every destructive admin action (CLAUDE.md §9: "Destructive
+ * actions need typed confirmation"). Staff must type `confirmText` exactly — a code, a slug, a name —
+ * before the action button enables, so a stray click can never delete anything. The action runs on
+ * the server; on success `onDone` decides what happens next (refresh the list, go back to it).
  */
-export function DangerZone({
-  title,
-  description,
+export function TypedConfirmDialog({
+  open,
+  onOpenChange,
   actionLabel,
+  description,
   confirmText,
   onConfirm,
   onDone,
 }: {
-  title: string;
-  description: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   actionLabel: string;
+  description: string;
   confirmText: string;
-  onConfirm: () => Promise<DangerResult>;
+  onConfirm: (typed: string) => Promise<DangerResult>;
   onDone: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -37,39 +38,38 @@ export function DangerZone({
   function run() {
     setError(null);
     startTransition(async () => {
-      const result = await onConfirm();
+      const result = await onConfirm(typed.trim());
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setOpen(false);
+      onOpenChange(false);
       onDone();
     });
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-crit/30 bg-crit/5 p-5">
-      <h2 className="font-display text-lg font-semibold text-crit">{title}</h2>
-      <p className="text-sm text-ink-2">{description}</p>
-      <Button
-        type="button"
-        variant="solid-crit"
-        size="sm"
-        onClick={() => {
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
           setTyped("");
           setError(null);
-          setOpen(true);
-        }}
-      >
-        {actionLabel}
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogTitle className="font-display text-xl font-semibold text-ink">{actionLabel}?</DialogTitle>
-          <DialogDescription className="mt-2 text-sm text-ink-2">
-            {description} Type <strong className="font-mono text-ink">{confirmText}</strong> to confirm.
-          </DialogDescription>
+        }
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogTitle className="font-display text-xl font-semibold text-ink">{actionLabel}?</DialogTitle>
+        <DialogDescription className="mt-2 text-sm text-ink-2">
+          {description} Type <strong className="font-mono text-ink">{confirmText}</strong> to confirm.
+        </DialogDescription>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (matches && !pending) run();
+          }}
+        >
           <Input
             aria-label={`Type ${confirmText} to confirm`}
             value={typed}
@@ -83,15 +83,52 @@ export function DangerZone({
             </p>
           )}
           <div className="mt-5 flex justify-end gap-3">
-            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="button" variant="solid-crit" size="sm" disabled={!matches || pending} onClick={run}>
+            <Button type="submit" variant="solid-crit" size="sm" disabled={!matches || pending}>
               {pending ? "Working…" : actionLabel}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** A destructive action at the foot of an edit page, behind `TypedConfirmDialog`. */
+export function DangerZone({
+  title,
+  description,
+  actionLabel,
+  confirmText,
+  onConfirm,
+  onDone,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  confirmText: string;
+  onConfirm: (typed: string) => Promise<DangerResult>;
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="space-y-3 rounded-lg border border-crit/30 bg-crit/5 p-5">
+      <h2 className="font-display text-lg font-semibold text-crit">{title}</h2>
+      <p className="text-sm text-ink-2">{description}</p>
+      <Button type="button" variant="solid-crit" size="sm" onClick={() => setOpen(true)}>
+        {actionLabel}
+      </Button>
+      <TypedConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        actionLabel={actionLabel}
+        description={description}
+        confirmText={confirmText}
+        onConfirm={onConfirm}
+        onDone={onDone}
+      />
     </section>
   );
 }

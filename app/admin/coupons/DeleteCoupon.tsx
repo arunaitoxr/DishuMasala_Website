@@ -16,7 +16,7 @@ export function DeleteCoupon({ id, code, usedCount }: { id: number; code: string
       }
       actionLabel="Delete coupon"
       confirmText={code}
-      onConfirm={() => deleteCouponAction(id, code)}
+      onConfirm={(typed) => deleteCouponAction(id, typed)}
       onDone={() => {
         router.push("/admin/coupons");
         router.refresh();

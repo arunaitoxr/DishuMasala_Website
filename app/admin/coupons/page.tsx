@@ -8,6 +8,8 @@ import { formatINR, paise } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
 import { COUPON_STATE_LABEL, couponDiscountLabel, couponState, type CouponState } from "@/lib/commerce/coupon-summary";
 import { listAdminCoupons, type AdminCouponRow } from "@/lib/db/queries/admin-coupons";
+import { RowActions } from "@/components/admin/RowActions";
+import { deleteCouponAction } from "./actions";
 
 export const metadata = { title: "Coupons" };
 
@@ -48,6 +50,23 @@ export default async function AdminCouponsPage() {
         const state = couponState(r, now);
         return <Badge tone={STATE_TONE[state]}>{COUPON_STATE_LABEL[state]}</Badge>;
       },
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) => (
+        <RowActions
+          editHref={`/admin/coupons/${r.id}`}
+          confirmText={r.code}
+          deleteDescription={
+            r.usedCount > 0
+              ? `${r.code} has been used on ${r.usedCount} paid order${r.usedCount === 1 ? "" : "s"}; those orders keep the discount they got.`
+              : `${r.code} will stop working immediately.`
+          }
+          onDelete={deleteCouponAction.bind(null, r.id)}
+        />
+      ),
     },
   ];
 

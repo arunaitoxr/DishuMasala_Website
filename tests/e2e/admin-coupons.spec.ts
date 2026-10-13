@@ -37,7 +37,7 @@ async function deleteCoupon(page: Page, url: string, code: string) {
   await expect(page.getByText(code, { exact: true })).toHaveCount(0);
 }
 
-test("staff create, apply, re-save and delete coupons", async ({ page }) => {
+test("staff create, open, apply, re-save and delete coupons", async ({ page }) => {
   test.setTimeout(120_000);
   const unique = randomUUID().slice(0, 6).toUpperCase();
   const fixedCode = `E2EFIX${unique}`;
@@ -84,6 +84,19 @@ test("staff create, apply, re-save and delete coupons", async ({ page }) => {
   await expect(page.getByText(`Discount (${cappedCode})`).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("−₹100").first()).toBeVisible();
 
-  await deleteCoupon(page, fixedUrl, fixedCode);
+  // Clicking a row opens the coupon (rows used to open with the keyboard only).
+  await page.goto("/admin/coupons");
+  await page.getByRole("row", { name: new RegExp(fixedCode) }).getByText("₹50 off").click();
+  await expect(page).toHaveURL(fixedUrl);
+
+  // Delete from the list's Actions column…
+  await page.goto("/admin/coupons");
+  await page.getByRole("row", { name: new RegExp(fixedCode) }).getByRole("button", { name: "Delete" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(`Type ${fixedCode} to confirm`).fill(fixedCode);
+  await dialog.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByRole("row", { name: new RegExp(fixedCode) })).toHaveCount(0);
+
+  // …and from the coupon's own page.
   await deleteCoupon(page, cappedUrl, cappedCode);
 });
