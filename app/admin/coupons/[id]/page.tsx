@@ -3,6 +3,7 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getAdminCouponById, getCouponRedemptions, listProductsAndCollectionsForPicker } from "@/lib/db/queries/admin-coupons";
 import { formatINR, paise } from "@/lib/money";
 import { CouponForm } from "../CouponForm";
+import { DeleteCoupon } from "../DeleteCoupon";
 import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Edit coupon" };
@@ -30,9 +31,9 @@ export default async function EditCouponPage({ params }: { params: Promise<{ id:
       </div>
 
       <section className="mt-8 max-w-2xl rounded-lg border border-line bg-surface p-5">
-        <h2 className="font-display text-lg font-semibold text-ink">Redemption history</h2>
+        <h2 className="font-display text-lg font-semibold text-ink">Paid orders using this coupon</h2>
         {redemptions.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-3">No redemptions yet.</p>
+          <p className="mt-2 text-sm text-ink-3">No paid orders have used it yet.</p>
         ) : (
           <table className="mt-3 w-full text-sm">
             <thead>
@@ -56,6 +57,10 @@ export default async function EditCouponPage({ params }: { params: Promise<{ id:
           </table>
         )}
       </section>
+
+      <div className="mt-8 max-w-2xl">
+        <DeleteCoupon id={coupon.id} code={coupon.code} usedCount={coupon.usedCount} />
+      </div>
     </div>
   );
 }

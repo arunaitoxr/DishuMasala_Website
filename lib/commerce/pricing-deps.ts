@@ -7,7 +7,7 @@ import "server-only";
  * separation is what makes computePricing unit-testable without a database.
  */
 import { getVariantsForPricing } from "@/lib/db/queries/variants";
-import { countCouponRedemptionsByEmail, getCouponByCode, hasAnyOrderForEmail } from "@/lib/db/queries/coupons";
+import { countPaidCouponUsesByEmail, getCouponByCode, hasPaidOrderForEmail } from "@/lib/db/queries/coupons";
 import {
   getCrossPillarBundleDiscountPercent,
   getFreeGiftThresholdPaise,
@@ -22,7 +22,7 @@ export const defaultPricingDeps: PricingDeps = {
   getFreeShippingThresholdPaise,
   getStandardShippingPaise,
   getCrossPillarBundleDiscountPercent,
-  countCouponRedemptionsByEmail,
-  hasAnyOrderForEmail,
+  countPaidCouponUsesByEmail,
+  hasPaidOrderForEmail,
   getFreeGiftThresholdPaise,
 };

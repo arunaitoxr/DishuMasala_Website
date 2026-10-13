@@ -5,9 +5,19 @@ import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatINR, paise } from "@/lib/money";
+import { formatDateTime } from "@/lib/dates";
+import { COUPON_STATE_LABEL, couponDiscountLabel, couponState, type CouponState } from "@/lib/commerce/coupon-summary";
 import { listAdminCoupons, type AdminCouponRow } from "@/lib/db/queries/admin-coupons";
 
 export const metadata = { title: "Coupons" };
+
+const STATE_TONE: Record<CouponState, "ok" | "neutral" | "warn" | "crit"> = {
+  active: "ok",
+  inactive: "neutral",
+  scheduled: "warn",
+  expired: "crit",
+  used_up: "crit",
+};
 
 export default async function AdminCouponsPage() {
   const session = await requireStaffOrAdmin();
@@ -15,18 +25,30 @@ export default async function AdminCouponsPage() {
 
   const rows = await listAdminCoupons();
 
+  const now = new Date();
   const columns: DataTableColumn<AdminCouponRow>[] = [
     { key: "code", label: "Code", render: (r) => <span className="font-mono font-medium text-ink">{r.code}</span> },
-    {
-      key: "value",
-      label: "Value",
-      render: (r) => (r.kind === "percent" ? `${r.value}%` : formatINR(paise(r.value))),
-    },
+    { key: "discount", label: "Discount", render: (r) => couponDiscountLabel(r) },
     { key: "minSpend", label: "Min spend", align: "right", render: (r) => (r.minSpendPaise != null ? formatINR(paise(r.minSpendPaise)) : "—") },
     { key: "firstOrder", label: "First order only", render: (r) => (r.firstOrderOnly ? "Yes" : "No") },
     { key: "usage", label: "Usage", align: "right", render: (r) => `${r.usedCount}${r.usageLimit != null ? ` / ${r.usageLimit}` : ""}` },
     { key: "perUser", label: "Per-user limit", align: "right", render: (r) => r.perUserLimit ?? "—" },
-    { key: "active", label: "Active", render: (r) => <Badge tone={r.active ? "ok" : "neutral"}>{r.active ? "Active" : "Inactive"}</Badge> },
+    {
+      key: "window",
+      label: "Valid",
+      render: (r) =>
+        r.startsAt || r.endsAt
+          ? `${r.startsAt ? formatDateTime(r.startsAt, { dateStyle: "medium", timeStyle: "short" }) : "now"} → ${r.endsAt ? formatDateTime(r.endsAt, { dateStyle: "medium", timeStyle: "short" }) : "no end"}`
+          : "Always",
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (r) => {
+        const state = couponState(r, now);
+        return <Badge tone={STATE_TONE[state]}>{COUPON_STATE_LABEL[state]}</Badge>;
+      },
+    },
   ];
 
   return (

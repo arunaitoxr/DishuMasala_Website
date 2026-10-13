@@ -6,17 +6,13 @@ import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import type { AdminCouponRow } from "@/lib/db/queries/admin-coupons";
+import { toISTDateTimeLocal } from "@/lib/dates";
+import { couponTermsLabel } from "@/lib/commerce/coupon-summary";
 import { createCouponAction, updateCouponAction, checkCouponCodeAvailableAction } from "./actions";
 
 interface Picker {
   products: { id: number; name: string }[];
   collections: { id: number; title: string }[];
-}
-
-function toDatetimeLocal(d: Date | null): string {
-  if (!d) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function parseAppliesTo(v: unknown): { productIds: number[]; collectionIds: number[] } {
@@ -44,8 +40,9 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
   const [firstOrderOnly, setFirstOrderOnly] = useState(coupon?.firstOrderOnly ?? false);
   const [usageLimit, setUsageLimit] = useState(coupon?.usageLimit != null ? String(coupon.usageLimit) : "");
   const [perUserLimit, setPerUserLimit] = useState(coupon?.perUserLimit != null ? String(coupon.perUserLimit) : "");
-  const [startsAt, setStartsAt] = useState(toDatetimeLocal(coupon?.startsAt ?? null));
-  const [endsAt, setEndsAt] = useState(toDatetimeLocal(coupon?.endsAt ?? null));
+  // Shown and typed in IST (lib/dates.ts) — the same string on the server and in the browser.
+  const [startsAt, setStartsAt] = useState(toISTDateTimeLocal(coupon?.startsAt ?? null));
+  const [endsAt, setEndsAt] = useState(toISTDateTimeLocal(coupon?.endsAt ?? null));
   const [active, setActive] = useState(coupon?.active ?? true);
   const [productIds, setProductIds] = useState<number[]>(initialApplies.productIds);
   const [collectionIds, setCollectionIds] = useState<number[]>(initialApplies.collectionIds);
@@ -56,6 +53,14 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
     if (!res.available) setError(`The code "${code.toUpperCase()}" is already in use.`);
     else if (error?.startsWith("The code")) setError(null);
   }
+
+  const preview = couponTermsLabel({
+    kind,
+    value: kind === "fixed" ? Math.round(Number(value) * 100) : Number(value),
+    maxDiscountPaise: kind === "percent" && maxDiscountRupees !== "" ? Math.round(Number(maxDiscountRupees) * 100) : null,
+    minSpendPaise: minSpendRupees !== "" ? Math.round(Number(minSpendRupees) * 100) : null,
+    firstOrderOnly,
+  });
 
   function toggle(list: number[], id: number, setter: (v: number[]) => void) {
     setter(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -97,6 +102,9 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
       {notice && <div role="status" className="rounded-md border border-ok/30 bg-ok/5 px-4 py-3 text-sm text-ok">{notice}</div>}
 
       <section className="space-y-4 rounded-lg border border-line bg-surface p-5">
+        <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-ink" aria-live="polite">
+          <span className="font-mono font-semibold">{code || "CODE"}</span> — {preview}
+        </p>
         <div>
           <label htmlFor="code" className="mb-1 block text-sm font-medium text-ink">Code</label>
           <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onBlur={handleCodeBlur} className="font-mono" />
@@ -110,8 +118,8 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
             </select>
           </div>
           <div>
-            <label htmlFor="value" className="mb-1 block text-sm font-medium text-ink">{kind === "percent" ? "Percent (whole number)" : "Amount (₹)"}</label>
-            <Input id="value" type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} />
+            <label htmlFor="value" className="mb-1 block text-sm font-medium text-ink">{kind === "percent" ? "Percent off (1–100)" : "Amount off (₹)"}</label>
+            <Input id="value" type="number" min={kind === "percent" ? 1 : 0.01} max={kind === "percent" ? 100 : undefined} step={kind === "percent" ? 1 : 0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -119,10 +127,13 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
             <label htmlFor="minSpend" className="mb-1 block text-sm font-medium text-ink">Minimum spend (₹, optional)</label>
             <Input id="minSpend" type="number" value={minSpendRupees} onChange={(e) => setMinSpendRupees(e.target.value === "" ? "" : Number(e.target.value))} />
           </div>
-          <div>
-            <label htmlFor="maxDiscount" className="mb-1 block text-sm font-medium text-ink">Max discount (₹, optional)</label>
-            <Input id="maxDiscount" type="number" value={maxDiscountRupees} onChange={(e) => setMaxDiscountRupees(e.target.value === "" ? "" : Number(e.target.value))} />
-          </div>
+          {kind === "percent" && (
+            <div>
+              <label htmlFor="maxDiscount" className="mb-1 block text-sm font-medium text-ink">Upper limit — max discount (₹, optional)</label>
+              <Input id="maxDiscount" type="number" min={1} step={1} value={maxDiscountRupees} onChange={(e) => setMaxDiscountRupees(e.target.value === "" ? "" : Number(e.target.value))} aria-describedby="maxDiscount-hint" />
+              <p id="maxDiscount-hint" className="mt-1 text-xs text-ink-3">However big the order, the discount never goes above this.</p>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -136,11 +147,11 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="startsAt" className="mb-1 block text-sm font-medium text-ink">Starts at (optional)</label>
+            <label htmlFor="startsAt" className="mb-1 block text-sm font-medium text-ink">Starts at, IST (optional)</label>
             <Input id="startsAt" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="endsAt" className="mb-1 block text-sm font-medium text-ink">Ends at (optional)</label>
+            <label htmlFor="endsAt" className="mb-1 block text-sm font-medium text-ink">Ends at, IST (optional)</label>
             <Input id="endsAt" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
           </div>
         </div>

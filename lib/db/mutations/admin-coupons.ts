@@ -27,3 +27,7 @@ export async function createCouponDb(input: CouponInput): Promise<number> {
 export async function updateCouponDb(id: number, input: CouponInput): Promise<void> {
   await db.update(coupons).set({ ...input, code: input.code.toUpperCase() }).where(eq(coupons.id, id));
 }
+
+export async function deleteCouponDb(id: number): Promise<void> {
+  await db.delete(coupons).where(eq(coupons.id, id));
+}

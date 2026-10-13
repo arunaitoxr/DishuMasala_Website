@@ -180,8 +180,8 @@ function fakeDeps(overrides: Partial<PricingDeps> = {}): PricingDeps {
     getFreeShippingThresholdPaise: async () => paise(50000),
     getStandardShippingPaise: async () => paise(5000),
     getCrossPillarBundleDiscountPercent: async () => 10,
-    countCouponRedemptionsByEmail: async () => 0,
-    hasAnyOrderForEmail: async () => false,
+    countPaidCouponUsesByEmail: async () => 0,
+    hasPaidOrderForEmail: async () => false,
     getFreeGiftThresholdPaise: async () => paise(69900),
     ...overrides,
   };
@@ -271,7 +271,7 @@ describe("computePricing — coupon application end to end", () => {
   it("rejects WELCOME5 for a returning email (first-order-only) and reports why", async () => {
     const result = await computePricing(
       { lines: [{ variantId: 1, qty: 1 }], couponCode: "WELCOME5", email: "returning@example.com" },
-      fakeDeps({ hasAnyOrderForEmail: async () => true }),
+      fakeDeps({ hasPaidOrderForEmail: async () => true }),
     );
     expect(result.couponCode).toBeNull();
     expect(result.discountPaise).toBe(0);
@@ -302,6 +302,23 @@ describe("computePricing — automatic cross-pillar bundle discount", () => {
     const result = await computePricing({ lines: [{ variantId: 4, qty: 2 }] }, fakeDeps());
     expect(result.crossPillarDiscountPaise).toBe(0);
     expect(result.crossPillarApplied).toBe(false);
+  });
+
+  it("never lets a coupon plus the cross-pillar discount take the goods below zero", async () => {
+    const FULL: CouponRow = { ...WELCOME5, code: "FULL", firstOrderOnly: false, value: 100 };
+    const result = await computePricing(
+      { lines: [{ variantId: 1, qty: 1 }, { variantId: 4, qty: 1 }], couponCode: "FULL" },
+      fakeDeps({ getCoupon: async () => FULL }),
+    );
+    expect(result.crossPillarDiscountPaise).toBe(1200);
+    expect(result.discountPaise).toBe(62000 - 1200);
+    expect(result.totalPaise).toBe(0);
+  });
+
+  it("caps a percent coupon at its upper limit (max discount)", async () => {
+    const CAPPED: CouponRow = { ...WELCOME5, code: "CAPPED", firstOrderOnly: false, value: 50, maxDiscountPaise: 10000 };
+    const result = await computePricing({ lines: [{ variantId: 1, qty: 1 }], couponCode: "CAPPED" }, fakeDeps({ getCoupon: async () => CAPPED }));
+    expect(result.discountPaise).toBe(10000); // 50% of ₹500 would be ₹250; capped at ₹100
   });
 
   it("applies the cross-pillar discount when the cart spans Tea and Masala, as 10% of the cheapest unit", async () => {
@@ -427,9 +444,13 @@ describe("validateCoupon — every rule as its own case", () => {
     expect(validateCoupon(coupon, { ...baseCtx, userRedemptions: 1 })).toEqual({ ok: false, reason: "per_user_limit" });
   });
 
-  it("per-user limit: with no email yet, a per-user-limited coupon can't be confirmed valid", () => {
+  it("per-user limit: with no email yet (cart drawer) the coupon applies provisionally", () => {
     const coupon: CouponRow = { ...WELCOME5, firstOrderOnly: false, perUserLimit: 1 };
-    expect(validateCoupon(coupon, { ...baseCtx, hasEmail: false })).toEqual({ ok: false, reason: "per_user_limit" });
+    expect(validateCoupon(coupon, { ...baseCtx, hasEmail: false, userRedemptions: 5 })).toEqual({ ok: true });
+  });
+
+  it("first-order-only: with no email yet (cart drawer) the coupon applies provisionally", () => {
+    expect(validateCoupon(WELCOME5, { ...baseCtx, hasEmail: false, priorOrderExists: true })).toEqual({ ok: true });
   });
 
   it("first-order-only: a returning email is rejected", () => {

@@ -52,10 +52,11 @@ export type CreateOrderResult =
 
 /**
  * The integrity-critical transaction (CLAUDE.md §7.5): order insert + item snapshots + stock
- * decrement + coupon usage increment, all inside one real Postgres transaction (lib/db/index.ts's
- * header comment explains why a pooled driver is required for this). Any failure
- * partway through — a stock conflict, a DB error — rolls back everything: no order, no stock
- * change, no coupon increment survives.
+ * decrement, all inside one real Postgres transaction (lib/db/index.ts's header comment explains
+ * why a pooled driver is required for this). Any failure partway through — a stock conflict, a DB
+ * error — rolls back everything: no order and no stock change survives. A coupon is not counted
+ * here: an order is still `pending` at this point, and coupon usage is recorded only once the
+ * payment is confirmed (`markOrderPaid`).
  *
  * Idempotency is enforced at the database level via the unique index on `idempotency_key`
  * (CLAUDE.md §7.5's "double-submit cannot create two orders"), not merely a client-side debounce:
@@ -135,25 +136,6 @@ export async function createOrderTransaction(input: CreateOrderInput): Promise<C
         })),
       );
 
-      if (input.pricing.couponCode) {
-        const [couponRow] = await tx
-          .select({ id: coupons.id })
-          .from(coupons)
-          .where(eq(coupons.code, input.pricing.couponCode))
-          .limit(1);
-        if (couponRow) {
-          await tx.update(coupons).set({ usedCount: sql`${coupons.usedCount} + 1` }).where(eq(coupons.id, couponRow.id));
-          // coupon_redemptions.user_id is genuinely not nullable, so a redemption row can only be
-          // recorded when checkout happened with a real session (PROMPTS.md Phase 6 — previously
-          // always null, since accounts didn't exist yet). Guest-level per-user enforcement still
-          // works with no user_id at all, via the email-based query in lib/db/queries/coupons.ts —
-          // this is purely an additional record for signed-in shoppers, not a new enforcement path.
-          if (input.userId != null) {
-            await tx.insert(couponRedemptions).values({ couponId: couponRow.id, orderId: orderRow.id, userId: input.userId });
-          }
-        }
-      }
-
       return { ok: true as const, orderId: orderRow.id, orderNumber, replayed: false as const };
     });
   } catch (err) {
@@ -191,21 +173,41 @@ export type MarkPaidResult = { ok: true; alreadyPaid: boolean } | { ok: false; e
  * other sees `alreadyPaid: true` and does nothing further. This is exactly the "arrives before,
  * after, or interleaved with the client callback" race CLAUDE.md §7.5 calls out, handled without
  * an explicit lock by relying on Postgres's own row-level atomicity for the single UPDATE.
+ *
+ * The same transition is where a coupon use is counted — once, by whichever caller wins — so
+ * `coupons.used_count` is the number of paid orders that used the code. Signed-in shoppers also get
+ * a `coupon_redemptions` row (its `user_id` is not nullable); guests are counted from `orders` by
+ * email (lib/db/queries/coupons.ts).
  */
 export async function markOrderPaid(orderId: number, razorpayPaymentId: string): Promise<MarkPaidResult> {
   try {
-    const updated = await db
-      .update(orders)
-      .set({ status: "confirmed", paymentStatus: "paid", razorpayPaymentId, updatedAt: new Date() })
-      .where(and(eq(orders.id, orderId), sql`${orders.paymentStatus} <> 'paid'`))
-      .returning({ id: orders.id });
+    return await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(orders)
+        .set({ status: "confirmed", paymentStatus: "paid", razorpayPaymentId, updatedAt: new Date() })
+        .where(and(eq(orders.id, orderId), sql`${orders.paymentStatus} <> 'paid'`))
+        .returning({ id: orders.id, couponCode: orders.couponCode, userId: orders.userId });
 
-    if (updated.length > 0) return { ok: true, alreadyPaid: false };
+      if (updated.length > 0) {
+        const { couponCode, userId } = updated[0];
+        if (couponCode) {
+          const [couponRow] = await tx
+            .update(coupons)
+            .set({ usedCount: sql`${coupons.usedCount} + 1` })
+            .where(eq(coupons.code, couponCode))
+            .returning({ id: coupons.id });
+          if (couponRow && userId != null) {
+            await tx.insert(couponRedemptions).values({ couponId: couponRow.id, orderId, userId });
+          }
+        }
+        return { ok: true as const, alreadyPaid: false };
+      }
 
-    const [existing] = await db.select({ id: orders.id, paymentStatus: orders.paymentStatus }).from(orders).where(eq(orders.id, orderId)).limit(1);
-    if (!existing) return { ok: false, error: "not_found" };
-    // Already paid (by the other racing caller) — idempotent no-op, not an error.
-    return { ok: true, alreadyPaid: true };
+      const [existing] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!existing) return { ok: false as const, error: "not_found" as const };
+      // Already paid (by the other racing caller) — idempotent no-op, not an error.
+      return { ok: true as const, alreadyPaid: true };
+    });
   } catch (err) {
     if (isUniqueViolation(err)) {
       // Someone else's order already claimed this exact razorpay_payment_id — should be
@@ -257,10 +259,4 @@ export async function markOrderPaymentFailed(orderId: number): Promise<{ ok: tru
  * is itself the "outstanding, needs retry" signal (see that function's doc comment). */
 export async function attachShiprocketOrderId(orderId: number, shiprocketOrderId: string): Promise<void> {
   await db.update(orders).set({ shiprocketOrderId, updatedAt: new Date() }).where(eq(orders.id, orderId));
-}
-
-export async function recordCouponRedemption(couponCode: string, orderId: number, userId: number): Promise<void> {
-  const [couponRow] = await db.select({ id: coupons.id }).from(coupons).where(eq(coupons.code, couponCode)).limit(1);
-  if (!couponRow) return;
-  await db.insert(couponRedemptions).values({ couponId: couponRow.id, orderId, userId });
 }

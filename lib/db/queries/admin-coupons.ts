@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { db } from "../index";
-import { coupons, couponRedemptions, orders } from "../schema";
+import { coupons, orders } from "../schema";
 
 export interface AdminCouponRow {
   id: number;
@@ -45,20 +45,21 @@ export interface CouponRedemptionRow {
   createdAt: Date;
 }
 
+/** Every paid order that used this coupon — guests included (their orders carry the code too), so
+ * the history matches the coupon's usage count. */
 export async function getCouponRedemptions(couponId: number): Promise<CouponRedemptionRow[]> {
-  const rows = await db
+  return db
     .select({
-      id: couponRedemptions.id,
+      id: orders.id,
       orderNumber: orders.orderNumber,
       orderEmail: orders.email,
       orderTotalPaise: orders.totalPaise,
-      createdAt: couponRedemptions.createdAt,
+      createdAt: orders.placedAt,
     })
-    .from(couponRedemptions)
-    .innerJoin(orders, eq(orders.id, couponRedemptions.orderId))
-    .where(eq(couponRedemptions.couponId, couponId))
-    .orderBy(desc(couponRedemptions.createdAt));
-  return rows;
+    .from(orders)
+    .innerJoin(coupons, eq(coupons.code, orders.couponCode))
+    .where(and(eq(coupons.id, couponId), eq(orders.paymentStatus, "paid")))
+    .orderBy(desc(orders.placedAt));
 }
 
 export async function listProductsAndCollectionsForPicker() {

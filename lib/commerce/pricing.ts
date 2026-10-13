@@ -130,8 +130,8 @@ export interface PricingDeps {
   /** Whole-number percent for the automatic cross-pillar bundle discount (CLAUDE.md §7.2's
    * 2026-09-10 amendment) — read from `settings`, never a hardcoded literal in this file. */
   getCrossPillarBundleDiscountPercent: () => Promise<number>;
-  countCouponRedemptionsByEmail: (couponId: number, email: string) => Promise<number>;
-  hasAnyOrderForEmail: (email: string) => Promise<boolean>;
+  countPaidCouponUsesByEmail: (couponId: number, email: string) => Promise<number>;
+  hasPaidOrderForEmail: (email: string) => Promise<boolean>;
   /** `null` (never a fabricated threshold) until the client's free-gift promotion actually has a
    * real settings value — see lib/db/queries/settings.ts's own doc for why. */
   getFreeGiftThresholdPaise: () => Promise<Paise | null>;
@@ -239,16 +239,16 @@ export function validateCoupon(
   if (coupon.usageLimit != null && coupon.usedCount >= coupon.usageLimit) {
     return { ok: false, reason: "usage_limit" };
   }
-  if (coupon.perUserLimit != null) {
-    // Without an email we cannot know per-user usage — treat as not-yet-satisfiable rather than
-    // silently allowing it (a guest who hasn't entered an email yet simply can't redeem a
-    // per-user-limited coupon until they do).
-    if (!ctx.hasEmail || ctx.userRedemptions >= coupon.perUserLimit) {
-      return { ok: false, reason: "per_user_limit" };
-    }
+  // The per-customer and first-order rules need to know who is buying. Without an email yet (the
+  // cart drawer, the cart page) they are provisionally satisfied, so a shopper can apply WELCOME5
+  // before checkout; `/api/checkout` always carries an email, so both are enforced strictly there
+  // before any order is created. (They used to be rejected outright without an email, which told
+  // every shopper in the cart that WELCOME5 was "only valid on your first order".)
+  if (coupon.perUserLimit != null && ctx.hasEmail && ctx.userRedemptions >= coupon.perUserLimit) {
+    return { ok: false, reason: "per_user_limit" };
   }
-  if (coupon.firstOrderOnly) {
-    if (!ctx.hasEmail || ctx.priorOrderExists) return { ok: false, reason: "first_order_only" };
+  if (coupon.firstOrderOnly && ctx.hasEmail && ctx.priorOrderExists) {
+    return { ok: false, reason: "first_order_only" };
   }
   const restriction = parseAppliesTo(coupon.appliesTo);
   const hasProductRestriction = !!restriction.productIds?.length;
@@ -421,8 +421,8 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
     const coupon = await deps.getCoupon(requestedCode);
     const hasEmail = !!input.email;
     const [priorOrderExists, userRedemptions] = await Promise.all([
-      hasEmail ? deps.hasAnyOrderForEmail(input.email!) : Promise.resolve(false),
-      hasEmail && coupon ? deps.countCouponRedemptionsByEmail(coupon.id, input.email!) : Promise.resolve(0),
+      hasEmail ? deps.hasPaidOrderForEmail(input.email!) : Promise.resolve(false),
+      hasEmail && coupon ? deps.countPaidCouponUsesByEmail(coupon.id, input.email!) : Promise.resolve(0),
     ]);
     const ctx: CouponContext = {
       subtotalPaise,
@@ -456,6 +456,9 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
 
   const crossPillarDiscountPaise = computeCrossPillarDiscountPaise(paidLines, crossPillarPercent);
   const crossPillarApplied = crossPillarDiscountPaise > 0;
+  // A large coupon plus the cross-pillar discount must never take the goods below ₹0 (checkout
+  // rejects a negative total), so the coupon gives way to whatever the bundle discount already took.
+  discountPaise = paise(Math.min(discountPaise, subtotalPaise - crossPillarDiscountPaise));
 
   const totalPaise = paise(subtotalPaise - discountPaise - crossPillarDiscountPaise + shippingPaise);
 
