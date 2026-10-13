@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getOrderForUserByOrderNumber } from "@/lib/db/queries/orders";
 import { getTrackingStatus } from "@/lib/shiprocket";
 import { formatINR } from "@/lib/money";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Order detail", robots: { index: false, follow: false } };
 
@@ -34,7 +35,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
       <p className="text-sm font-semibold uppercase tracking-[0.08em] text-ink-2">Order</p>
       <h1 className="mt-1 font-display text-2xl font-semibold text-ink">{order.orderNumber}</h1>
       <p className="mt-1 text-sm capitalize text-ink-2">
-        {order.status} · placed {order.placedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+        {order.status} · placed {formatDate(order.placedAt, { day: "numeric", month: "short", year: "numeric" })}
       </p>
 
       <section className="mt-6 rounded-lg border border-line bg-surface p-5">

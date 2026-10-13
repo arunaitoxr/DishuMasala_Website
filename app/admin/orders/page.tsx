@@ -12,6 +12,7 @@ import {
   type AdminOrderRow,
   type AdminOrderFilters,
 } from "@/lib/db/queries/admin-orders";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata = { title: "Orders" };
 
@@ -78,7 +79,7 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
       key: "placedAt",
       label: "Placed",
       sortKey: "placed_at",
-      render: (r) => new Date(r.placedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }),
+      render: (r) => formatDateTime(r.placedAt, { dateStyle: "medium", timeStyle: "short" }),
     },
   ];
 

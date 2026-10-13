@@ -20,6 +20,7 @@ import {
 } from "@/lib/db/mutations/admin-content";
 import { isPostSlugTaken, isPageSlugTaken, getAdminPostById, getAdminPageById } from "@/lib/db/queries/admin-content";
 import { presignContentImageUpload, finalizeContentImageUpload } from "@/lib/storage/admin-upload";
+import { formatDateTime } from "@/lib/dates";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
 
@@ -127,7 +128,7 @@ export async function publishPostAction(input: z.infer<typeof publishSchema>): P
   const scheduled = publishedAt && publishedAt.getTime() > Date.now();
   await writeAuditLog({ actorUserId: auth.user.id, action: "post.publish", entity: "post", entityId: parsed.data.id, diff: { slug: existing.slug, publishedAt: publishedAt?.toISOString() ?? "now" } });
   revalidateContent(existing.slug, existing.kind);
-  return { ok: true, message: scheduled ? `Scheduled for ${publishedAt!.toLocaleString("en-IN")}.` : "Published — live on the storefront now." };
+  return { ok: true, message: scheduled ? `Scheduled for ${formatDateTime(publishedAt!)}.` : "Published — live on the storefront now." };
 }
 
 export async function unpublishPostAction(id: number): Promise<AdminResult> {

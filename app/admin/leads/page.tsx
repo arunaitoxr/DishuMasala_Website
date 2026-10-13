@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { listAdminPhoneLeads, ADMIN_LEADS_PAGE_SIZE } from "@/lib/db/queries/admin-leads";
+import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const metadata = { title: "Phone leads" };
 
@@ -65,10 +66,10 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
               rows.map((r) => (
                 <tr key={r.id} className="border-b border-line last:border-b-0">
                   <td className="px-4 py-3 font-medium text-ink tabular-nums">{r.phone}</td>
-                  <td className="px-4 py-3 text-ink-2">{new Date(r.consentAt).toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-ink-2">{formatDateTime(r.consentAt)}</td>
                   <td className="px-4 py-3 text-ink-2">{r.sourcePath ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink">{r.productViews}</td>
-                  <td className="px-4 py-3 text-ink-2">{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
+                  <td className="px-4 py-3 text-ink-2">{formatDate(r.createdAt)}</td>
                 </tr>
               ))
             )}

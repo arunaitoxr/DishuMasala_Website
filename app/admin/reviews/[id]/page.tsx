@@ -5,6 +5,7 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getAdminReviewById } from "@/lib/db/queries/admin-reviews";
 import { Badge } from "@/components/ui/Badge";
 import { ReviewModerationActions } from "./ReviewModerationActions";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata = { title: "Review" };
 
@@ -45,7 +46,7 @@ export default async function AdminReviewDetailPage({ params }: { params: Promis
           <p className="font-medium text-ink">{review.authorName}</p>
           {review.verifiedBuyer && <Badge tone="ok">Verified buyer</Badge>}
         </div>
-        <p className="text-xs text-ink-3">{review.email} · {new Date(review.createdAt).toLocaleString("en-IN")}</p>
+        <p className="text-xs text-ink-3">{review.email} · {formatDateTime(review.createdAt)}</p>
         {review.title && <p className="mt-3 font-semibold text-ink">{review.title}</p>}
         <p className="mt-2 whitespace-pre-wrap text-sm text-ink-2">{review.body}</p>
 

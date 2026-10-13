@@ -3,6 +3,7 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getAdminCouponById, getCouponRedemptions, listProductsAndCollectionsForPicker } from "@/lib/db/queries/admin-coupons";
 import { formatINR, paise } from "@/lib/money";
 import { CouponForm } from "../CouponForm";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Edit coupon" };
 
@@ -48,7 +49,7 @@ export default async function EditCouponPage({ params }: { params: Promise<{ id:
                   <td className="py-2">{r.orderNumber}</td>
                   <td className="py-2 text-ink-2">{r.orderEmail}</td>
                   <td className="py-2 text-right">{formatINR(paise(r.orderTotalPaise))}</td>
-                  <td className="py-2 text-right text-ink-2">{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
+                  <td className="py-2 text-right text-ink-2">{formatDate(r.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

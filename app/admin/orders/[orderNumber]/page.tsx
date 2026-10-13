@@ -6,6 +6,7 @@ import { legalNextStatuses } from "@/lib/commerce/order-status";
 import { formatINR } from "@/lib/money";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { OrderActions } from "./OrderActions";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata = { title: "Order detail" };
 
@@ -47,7 +48,7 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">{order.orderNumber}</h1>
           <p className="mt-1 text-sm text-ink-2">
-            Placed {order.placedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}
+            Placed {formatDateTime(order.placedAt, { dateStyle: "medium", timeStyle: "short" })}
           </p>
         </div>
         <Badge tone={STATUS_TONE[order.status] ?? "neutral"} className="text-sm">
@@ -158,7 +159,7 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
                   <span className="font-medium">{entry.action}</span>
                   {entry.actorName && <span className="text-ink-2"> — {entry.actorName}</span>}
                 </p>
-                <p className="text-xs text-ink-3">{entry.createdAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}</p>
+                <p className="text-xs text-ink-3">{formatDateTime(entry.createdAt, { dateStyle: "medium", timeStyle: "short" })}</p>
                 {entry.diff != null && (
                   <pre className="mt-1 overflow-x-auto rounded-sm bg-surface-2 p-2 text-xs text-ink-2">
                     {JSON.stringify(entry.diff, null, 2)}

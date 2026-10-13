@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { listAdminReviews, listProductsForReviewFilter, ADMIN_REVIEWS_PAGE_SIZE, type AdminReviewRow } from "@/lib/db/queries/admin-reviews";
 import { BulkApproveButton } from "./BulkApproveButton";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Reviews" };
 
@@ -55,7 +56,7 @@ export default async function AdminReviewsPage({ searchParams }: PageProps) {
     { key: "author", label: "Author", render: (r) => <span>{r.authorName}{r.verifiedBuyer && <Badge tone="ok" className="ml-1.5">Verified</Badge>}</span> },
     { key: "title", label: "Title", render: (r) => r.title ?? "—" },
     { key: "photos", label: "Photos", align: "right", render: (r) => r.photoCount },
-    { key: "created", label: "Submitted", render: (r) => new Date(r.createdAt).toLocaleDateString("en-IN") },
+    { key: "created", label: "Submitted", render: (r) => formatDate(r.createdAt) },
   ];
 
   return (

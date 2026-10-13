@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import type { ReviewSort } from "@/lib/db/queries/reviews";
 import { getReviewsPageAction, type ReviewPageItem, type ReviewsPageResult } from "@/lib/actions/reviews";
+import { formatDate } from "@/lib/dates";
 
 export interface ReviewSummaryProps {
   count: number;
@@ -74,7 +75,7 @@ function ReviewCard({ review, onOpenPhoto }: { review: ReviewPageItem; onOpenPho
 
       <p className="mt-2 text-xs text-ink-3">
         {review.authorName} ·{" "}
-        {new Date(review.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
+        {formatDate(review.createdAt, { year: "numeric", month: "short", day: "numeric" })}
       </p>
     </article>
   );

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOrdersForUser } from "@/lib/db/queries/orders";
 import { formatINR } from "@/lib/money";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Your orders", robots: { index: false, follow: false } };
 
@@ -34,7 +35,7 @@ export default async function AccountOrdersPage() {
                 <div>
                   <p className="text-sm font-medium text-ink">{order.orderNumber}</p>
                   <p className="text-xs text-ink-2">
-                    {order.placedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+                    {formatDate(order.placedAt, { day: "numeric", month: "short", year: "numeric" })} ·{" "}
                     <span className="capitalize">{order.status}</span>
                   </p>
                 </div>

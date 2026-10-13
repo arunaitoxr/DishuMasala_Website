@@ -7,6 +7,7 @@ import { getAdminCustomerById, getOrdersForCustomer, getReviewsForCustomer } fro
 import { getAddressesForUser } from "@/lib/db/queries/addresses";
 import { getWishlistCards } from "@/lib/db/queries/wishlist";
 import { CustomerContactForm } from "../CustomerContactForm";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Customer" };
 
@@ -63,7 +64,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
                   </td>
                   <td className="py-2 capitalize text-ink-2">{o.status}</td>
                   <td className="py-2 text-right">{formatINR(paise(o.totalPaise))}</td>
-                  <td className="py-2 text-right text-ink-2">{new Date(o.placedAt).toLocaleDateString("en-IN")}</td>
+                  <td className="py-2 text-right text-ink-2">{formatDate(o.placedAt)}</td>
                 </tr>
               ))}
             </tbody>

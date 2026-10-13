@@ -4,6 +4,7 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { formatINR, paise } from "@/lib/money";
 import { listAdminCustomers, ADMIN_CUSTOMERS_PAGE_SIZE, type AdminCustomerRow } from "@/lib/db/queries/admin-customers";
+import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Customers" };
 
@@ -40,7 +41,7 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
     { key: "phone", label: "Phone", render: (r) => r.phone ?? "—" },
     { key: "orders", label: "Orders", align: "right", render: (r) => r.orderCount },
     { key: "ltv", label: "Lifetime value", align: "right", render: (r) => formatINR(paise(r.lifetimeValuePaise)) },
-    { key: "since", label: "Customer since", render: (r) => new Date(r.createdAt).toLocaleDateString("en-IN") },
+    { key: "since", label: "Customer since", render: (r) => formatDate(r.createdAt) },
   ];
 
   return (

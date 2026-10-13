@@ -4,6 +4,7 @@ import Image from "next/image";
 import { getPublishedPosts } from "@/lib/db/queries/posts";
 import { PAGE_CONTAINER } from "@/lib/design-tokens";
 import { cn } from "@/lib/cn";
+import { formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "Blog — Dishu Food and Beverages",
@@ -34,7 +35,7 @@ export default async function BlogIndexPage() {
                 <h2 className="font-display text-xl font-semibold text-ink group-hover:underline">{post.title}</h2>
                 {post.excerpt && <p className="mt-1 text-sm text-ink-2">{post.excerpt}</p>}
                 <p className="mt-2 text-xs text-ink-3">
-                  {new Date(post.publishedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                  {formatDate(post.publishedAt, { dateStyle: "medium" })}
                 </p>
               </Link>
             </li>

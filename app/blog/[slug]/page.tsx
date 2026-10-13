@@ -7,6 +7,7 @@ import { TiptapRenderer } from "@/components/content/TiptapRenderer";
 import { readingTimeMinutes } from "@/lib/content/tiptap-schema";
 import { PAGE_CONTAINER } from "@/lib/design-tokens";
 import { cn } from "@/lib/cn";
+import { formatDate } from "@/lib/dates";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -58,7 +59,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       <h1 className="mt-6 type-page-title text-ink">{post.title}</h1>
       <p className="mt-2 text-sm text-ink-3">
         {post.author && <>By {post.author} · </>}
-        {post.publishedAt.toLocaleDateString("en-IN", { dateStyle: "medium" })} · ~{minutes} min read
+        {formatDate(post.publishedAt, { dateStyle: "medium" })} · ~{minutes} min read
       </p>
 
       <div className="mt-8">

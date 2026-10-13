@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { listAdminPosts, listAdminPages, type AdminPostRow, type AdminPageRow } from "@/lib/db/queries/admin-content";
+import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const metadata = { title: "Content" };
 
@@ -18,14 +19,14 @@ export default async function AdminContentPage() {
     { key: "title", label: "Title", render: (r) => <span className="font-medium text-ink">{r.title}</span> },
     { key: "kind", label: "Kind", render: (r) => <Badge tone="neutral">{r.kind}</Badge> },
     { key: "status", label: "Status", render: (r) => <Badge tone={r.status === "published" ? "ok" : "neutral"}>{r.status}</Badge> },
-    { key: "publishedAt", label: "Published", render: (r) => (r.publishedAt ? new Date(r.publishedAt).toLocaleString("en-IN") : "—") },
+    { key: "publishedAt", label: "Published", render: (r) => (r.publishedAt ? formatDateTime(r.publishedAt) : "—") },
   ];
 
   const pageColumns: DataTableColumn<AdminPageRow>[] = [
     { key: "title", label: "Title", render: (r) => <span className="font-medium text-ink">{r.title}</span> },
     { key: "slug", label: "Slug", render: (r) => `/${r.slug}` },
     { key: "status", label: "Status", render: (r) => <Badge tone={r.status === "published" ? "ok" : "neutral"}>{r.status}</Badge> },
-    { key: "updatedAt", label: "Updated", render: (r) => new Date(r.updatedAt).toLocaleDateString("en-IN") },
+    { key: "updatedAt", label: "Updated", render: (r) => formatDate(r.updatedAt) },
   ];
 
   return (
