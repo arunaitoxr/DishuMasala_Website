@@ -1,5 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Local-only test credentials (E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD) — gitignored, never committed.
+try {
+  process.loadEnvFile(".env.e2e.local");
+} catch {
+  // Not present: the admin specs explain what to set when they run.
+}
+
+/** Override when :3000 is taken by something else, e.g. `TEST_BASE_URL=http://localhost:3001 pnpm test:e2e`. */
+const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3000";
+
 /**
  * Playwright E2E config (PROMPTS.md Phase 3 item 7 is the first phase to need this — no config
  * existed before). Points at the already-running local dev server (CLAUDE.md's dev environment
@@ -14,7 +24,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
     // Pre-dismisses components/marketing/PhoneCapturePopup.tsx for every test: it opens 5s after
     // landing, timed for a real visitor, not a test suite — a test that takes longer than that
@@ -31,7 +41,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "pnpm dev",
-    url: "http://localhost:3000",
+    url: BASE_URL,
     reuseExistingServer: true,
     timeout: 120_000,
   },

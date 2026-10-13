@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
+import { adminCredentials } from "./_helpers/admin";
 
 /**
  * Real proof of PROMPTS.md Phase 8's acceptance criterion: "Publishing a post makes it appear on
@@ -9,8 +10,7 @@ import { test, expect } from "@playwright/test";
  * (started once for this whole Playwright run, never restarted) and confirms the new post appears
  * — proving the revalidation call, not a rebuild, is what made it show up.
  */
-const ADMIN_EMAIL = "admin@dishumasala.com";
-const ADMIN_PASSWORD = "Phase7-Admin-Test-Pass1";
+const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
 test("publishing a post makes it appear on /blog live, no redeploy", async ({ page }) => {
   const unique = randomUUID().slice(0, 8);

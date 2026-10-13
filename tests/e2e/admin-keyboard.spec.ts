@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
+import { adminCredentials } from "./_helpers/admin";
 
 /**
  * Real proof of PROMPTS.md Phase 7's acceptance criterion: "Admin is keyboard-operable end to
@@ -8,8 +9,7 @@ import { test, expect } from "@playwright/test";
  * (tests/e2e/*-keyboard*.spec.ts equivalents). No `.click()` calls anywhere below except the
  * one-time login form submit, which isn't part of "the admin" this criterion is about.
  */
-const ADMIN_EMAIL = "admin@dishumasala.com";
-const ADMIN_PASSWORD = "Phase7-Admin-Test-Pass1";
+const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
 async function createRealOrder(request: import("@playwright/test").APIRequestContext): Promise<string> {
   const email = `admin-kbd-e2e-${randomUUID().slice(0, 8)}@example.com`;

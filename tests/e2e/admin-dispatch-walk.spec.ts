@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
+import { adminCredentials } from "./_helpers/admin";
 
 /**
  * Real proof of PROMPTS.md Phase 7's acceptance criterion: "A staff user can take an order from
@@ -11,8 +12,7 @@ import { test, expect } from "@playwright/test";
  * rather than a fabricated AWB — exactly what CLAUDE.md's honest-degrade rule requires, and what
  * this test explicitly checks for instead of a fake-looking tracking number.
  */
-const ADMIN_EMAIL = "admin@dishumasala.com";
-const ADMIN_PASSWORD = "Phase7-Admin-Test-Pass1";
+const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
 async function createRealCodOrder(request: import("@playwright/test").APIRequestContext): Promise<string> {
   const email = `admin-e2e-${randomUUID().slice(0, 8)}@example.com`;

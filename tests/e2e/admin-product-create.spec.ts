@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import sharp from "sharp";
+import { adminCredentials } from "./_helpers/admin";
 
 /**
  * Real proof of PROMPTS.md Phase 8's flagship acceptance criterion: "Create a product with two
@@ -11,8 +12,7 @@ import sharp from "sharp";
  * (local MinIO substitute) path, fills real alt text, publishes, then loads the real storefront
  * product page and confirms what's there.
  */
-const ADMIN_EMAIL = "admin@dishumasala.com";
-const ADMIN_PASSWORD = "Phase7-Admin-Test-Pass1";
+const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
 async function makeTestImage(hue: number): Promise<Buffer> {
   return sharp({ create: { width: 40, height: 40, channels: 3, background: { r: hue, g: 80, b: 160 } } })
