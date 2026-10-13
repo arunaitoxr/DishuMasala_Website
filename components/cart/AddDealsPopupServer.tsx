@@ -1,16 +1,20 @@
 import { getPublishedProductsByCollectionSlug } from "@/lib/db/queries/products";
+import { getFreeGiftThresholdPaise } from "@/lib/db/queries/settings";
 import { DEAL_COLLECTION_SLUGS } from "@/lib/deals";
 import { pillarsOf } from "@/lib/pillars";
 import { AddDealsPopup, type DealCandidate } from "./AddDealsPopup";
 
 /** Server wrapper for AddDealsPopup — reads the four pillar collections (cached, tagged) and reduces
- * them to one lead product per pillar plus a product → pillar map. Same server/client split as
- * FreeGiftOptionsServer.tsx. */
+ * them to every in-stock product plus a product → pillar map, along with the free-gift threshold the
+ * popup's nudge line names. Same server/client split as FreeGiftOptionsServer.tsx. */
 export async function AddDealsPopupServer() {
   // The four pillar collections supply the products to offer; the two combo collections are read only
   // so an add of a combo can be classified (a spice combo is "spices", a tea combo is its teas).
   const combos = await Promise.all(["combos", "tea-combos"].map((slug) => getPublishedProductsByCollectionSlug(slug)));
-  const perCollection = await Promise.all(DEAL_COLLECTION_SLUGS.map((slug) => getPublishedProductsByCollectionSlug(slug)));
+  const [perCollection, freeGiftThresholdPaise] = await Promise.all([
+    Promise.all(DEAL_COLLECTION_SLUGS.map((slug) => getPublishedProductsByCollectionSlug(slug))),
+    getFreeGiftThresholdPaise(),
+  ]);
 
   const candidates: DealCandidate[] = [];
   const productPillars: Record<number, string[]> = {};
@@ -20,7 +24,7 @@ export async function AddDealsPopupServer() {
     const slug = DEAL_COLLECTION_SLUGS[i];
     for (const p of products) productPillars[p.id] = pillarsOf(slug, p.slug);
 
-    // Every in-stock product of the pillar is a candidate; the popup picks one at random per opening.
+    // Every in-stock product of the pillar is a candidate; the popup shows all not yet in the cart.
     for (const p of products) {
       const inStock = p.variants.filter((v) => v.inStock);
       if (inStock.length === 0) continue;
@@ -47,5 +51,7 @@ export async function AddDealsPopupServer() {
   });
 
   if (candidates.length === 0) return null;
-  return <AddDealsPopup candidates={candidates} productPillars={productPillars} />;
+  return (
+    <AddDealsPopup candidates={candidates} productPillars={productPillars} freeGiftThresholdPaise={freeGiftThresholdPaise} />
+  );
 }

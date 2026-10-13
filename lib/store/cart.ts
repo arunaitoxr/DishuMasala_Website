@@ -435,10 +435,17 @@ export function selectFreeGiftThresholdPaise(state: CartSnapshot): number | null
  * (`pricing` must exist, CLAUDE.md §7.5), so this only ever reflects a real, server-derived
  * subtotal, not an optimistic local one. */
 export function selectFreeGiftEligible(state: CartSnapshot): boolean {
+  return selectRupeesToFreeGiftPaise(state) === 0;
+}
+
+/** How much more (non-gift) spend clears the free-gift threshold — `0` once it has, `null` before the
+ * server has priced the cart or while the promotion has no settings value. The same subtotal
+ * `selectFreeGiftEligible` checks, so the two can never disagree. */
+export function selectRupeesToFreeGiftPaise(state: CartSnapshot): number | null {
   const threshold = state.pricing?.freeGiftThresholdPaise;
-  if (threshold == null || state.pricing == null) return false;
+  if (threshold == null || state.pricing == null) return null;
   const nonGiftSubtotal = state.pricing.lines.filter((l) => !l.isGift).reduce((sum, l) => sum + l.lineTotalPaise, 0);
-  return nonGiftSubtotal >= threshold;
+  return Math.max(0, threshold - nonGiftSubtotal);
 }
 
 export function selectHasFreeGift(state: CartSnapshot): boolean {
