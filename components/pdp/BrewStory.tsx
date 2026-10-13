@@ -44,25 +44,13 @@ const FRAMES: Frame[] = [
   },
 ];
 
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
-
 function BrewFrame({ frame, index, revealed }: { frame: Frame; index: number; revealed: boolean }) {
   return (
     <div
       className={cn(
         "flex flex-col gap-4 transition-[opacity,transform] duration-[700ms] ease-[cubic-bezier(.2,.6,.2,1)]",
         revealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+        "motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none",
       )}
       style={{ transitionDelay: revealed ? `${index * 120}ms` : "0ms" }}
     >
@@ -85,18 +73,16 @@ function BrewFrame({ frame, index, revealed }: { frame: Frame; index: number; re
  * Three static frames revealed on scroll via IntersectionObserver (not the hero's continuous
  * scroll-scrub), one real gradient per frame reusing the hero's token system. A
  * `prefers-reduced-motion` visitor gets every frame already revealed — the finished state, never a
- * half-appeared one (CLAUDE.md §5.5).
+ * half-appeared one (CLAUDE.md §5.5). That is done in CSS (`motion-reduce:`), not by seeding the
+ * reveal state from `matchMedia`: the server can't see the media query, so the state seeded in the
+ * browser disagreed with the server's HTML, and the hidden server classes stayed on screen whenever
+ * React kept that HTML as it was — every frame invisible to exactly the visitors it was meant to help.
  */
 export function BrewStory() {
-  const reducedMotion = useReducedMotion();
-  const [revealed, setRevealed] = useState<boolean[]>(() => FRAMES.map(() => reducedMotion));
+  const [revealed, setRevealed] = useState<boolean[]>(() => FRAMES.map(() => false));
   const refs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    if (reducedMotion) {
-      return;
-    }
-
     const observer = new IntersectionObserver(
       (entries) => {
         setRevealed((prev) => {
@@ -115,7 +101,7 @@ export function BrewStory() {
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
-  }, [reducedMotion]);
+  }, []);
 
   return (
     <section aria-labelledby="brew-story-heading" className="w-full">
