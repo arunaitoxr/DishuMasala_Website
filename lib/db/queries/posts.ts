@@ -43,8 +43,16 @@ async function fetchPublishedPosts(kind?: "blog" | "recipe"): Promise<PostSummar
   }));
 }
 
+/** `unstable_cache` stores its result as JSON, so every cache hit hands `publishedAt` back as an ISO string
+ * despite the `Date` type — and the post pages calling `.toISOString()` on it returned a 500 on every visit
+ * after the first. Revived here, where the cache is crossed, so the type stays true for every caller. */
+function revivePublishedAt<T extends { publishedAt: Date }>(post: T): T {
+  return { ...post, publishedAt: new Date(post.publishedAt) };
+}
+
 export async function getPublishedPosts(kind?: "blog" | "recipe"): Promise<PostSummary[]> {
-  return unstable_cache(() => fetchPublishedPosts(kind), ["published-posts", kind ?? "all"], { tags: ["posts"] })();
+  const posts = await unstable_cache(() => fetchPublishedPosts(kind), ["published-posts", kind ?? "all"], { tags: ["posts"] })();
+  return posts.map(revivePublishedAt);
 }
 
 export interface PostDetail extends PostSummary {
@@ -80,7 +88,10 @@ async function fetchPublishedPostBySlug(slug: string, kind: "blog" | "recipe"): 
 }
 
 export async function getPublishedPostBySlug(slug: string, kind: "blog" | "recipe"): Promise<PostDetail | null> {
-  return unstable_cache(() => fetchPublishedPostBySlug(slug, kind), ["published-post", kind, slug], { tags: ["posts", `post:${slug}`] })();
+  const post = await unstable_cache(() => fetchPublishedPostBySlug(slug, kind), ["published-post", kind, slug], {
+    tags: ["posts", `post:${slug}`],
+  })();
+  return post && revivePublishedAt(post);
 }
 
 export interface RelatedProductCard {
