@@ -141,6 +141,13 @@
       "when": 1791955383454,
       "tag": "0019_post_cover_alt",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791956353716,
+      "tag": "0020_enable_rls_public_tables",
+      "breakpoints": true
     }
   ]
 }
