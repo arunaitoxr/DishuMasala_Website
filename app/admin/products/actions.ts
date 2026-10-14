@@ -47,6 +47,8 @@ async function requireStaff() {
 function revalidateCatalog(slug?: string) {
   updateTag("products");
   if (slug) updateTag(`product:${slug}`);
+  // The homepage review carousel only shows reviews of published products, and links to them.
+  updateTag("reviews");
   revalidatePath("/admin/products");
   revalidatePath("/shop");
   if (slug) revalidatePath(`/product/${slug}`);

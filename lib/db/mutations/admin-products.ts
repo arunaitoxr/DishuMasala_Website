@@ -154,6 +154,9 @@ export type PublishResult = { ok: true } | { ok: false; error: string };
  * not a real, sellable listing.
  */
 export async function publishProductDb(id: number): Promise<PublishResult> {
+  const [current] = await db.select({ status: products.status }).from(products).where(eq(products.id, id)).limit(1);
+  if (!current) return { ok: false, error: "Product not found." };
+  if (current.status === "archived") return { ok: false, error: "This product is deleted — restore it first." };
   const images = await db.select({ alt: productImages.alt }).from(productImages).where(eq(productImages.productId, id));
   const variantRows = await db.select({ id: variants.id }).from(variants).where(eq(variants.productId, id));
 
@@ -168,8 +171,9 @@ export async function publishProductDb(id: number): Promise<PublishResult> {
   return { ok: true };
 }
 
+/** Published → draft. An archived (deleted) product stays archived; restoring is a separate step. */
 export async function unpublishProductDb(id: number): Promise<void> {
-  await db.update(products).set({ status: "draft", updatedAt: new Date() }).where(eq(products.id, id));
+  await db.update(products).set({ status: "draft", updatedAt: new Date() }).where(and(eq(products.id, id), eq(products.status, "published")));
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -398,8 +402,14 @@ export async function deleteProductPermanentlyDb(id: number): Promise<{ ok: true
   if (!product) return { ok: false, error: "Product not found." };
   if (product.status !== "archived") return { ok: false, error: "Archive the product first, then delete it permanently." };
 
-  const images = await db.select({ storageKey: productImages.storageKey }).from(productImages).where(eq(productImages.productId, id));
-  await db.delete(products).where(eq(products.id, id));
+  // One transaction, and the delete itself re-checks "archived": a restore landing between the
+  // check above and the delete must not get a live product wiped.
+  const images = await db.transaction(async (tx) => {
+    const keys = await tx.select({ storageKey: productImages.storageKey }).from(productImages).where(eq(productImages.productId, id));
+    const deleted = await tx.delete(products).where(and(eq(products.id, id), eq(products.status, "archived"))).returning({ id: products.id });
+    return deleted.length > 0 ? keys : null;
+  });
+  if (!images) return { ok: false, error: "Archive the product first, then delete it permanently." };
   for (const img of images) await deleteImageFilesIfUnused(img.storageKey);
   return { ok: true };
 }

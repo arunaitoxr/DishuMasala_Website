@@ -35,6 +35,18 @@ export function TypedConfirmDialog({
   const [pending, startTransition] = useTransition();
   const matches = typed.trim() === confirmText;
 
+  // Every opening starts empty. A controlled dialog with no Trigger never gets onOpenChange(true)
+  // from Radix, so the reset happens here, on the closed → open change — otherwise the second image
+  // deleted from the same list would open with "delete" already typed in.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setTyped("");
+      setError(null);
+    }
+  }
+
   function run() {
     setError(null);
     startTransition(async () => {
@@ -51,13 +63,7 @@ export function TypedConfirmDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (next) {
-          setTyped("");
-          setError(null);
-        }
-        onOpenChange(next);
-      }}
+      onOpenChange={onOpenChange}
     >
       <DialogContent className="max-w-md">
         <DialogTitle className="font-display text-xl font-semibold text-ink">{actionLabel}?</DialogTitle>

@@ -8,7 +8,7 @@ import "server-only";
  */
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db } from "../index";
-import { orders, reviews, variants } from "../schema";
+import { orders, products, reviews, variants } from "../schema";
 import { paise, sumPaise, type Paise } from "@/lib/money";
 
 function startOfTodayIST(): Date {
@@ -71,12 +71,14 @@ export async function getOrdersAwaitingDispatchCount(): Promise<number> {
 }
 
 /** Variants with no stock at all, or a tracked low count (< 10 — the same "Only N left" threshold
- * CLAUDE.md §7.6 uses on the storefront, reused here rather than inventing a second number). */
+ * CLAUDE.md §7.6 uses on the storefront, reused here rather than inventing a second number). Deleted
+ * (archived) products don't count — nobody needs to restock those. */
 export async function getLowOrOutOfStockCount(): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(variants)
-    .where(sql`${variants.inStock} = false or (${variants.stockQty} is not null and ${variants.stockQty} < 10)`);
+    .innerJoin(products, eq(products.id, variants.productId))
+    .where(sql`${products.status} <> 'archived' and (${variants.inStock} = false or (${variants.stockQty} is not null and ${variants.stockQty} < 10))`);
   return row?.n ?? 0;
 }
 

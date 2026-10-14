@@ -70,8 +70,13 @@ export async function createCustomerAction(input: z.infer<typeof contactSchema>)
   });
   if (error || !data.user) return { ok: false, error: `Couldn't create the account: ${error?.message ?? "unknown error"}` };
 
-  const id = await finishCustomerCreateDb(parsed.data.email, data.user.id, { name: parsed.data.name, phone });
-  if (id == null) return { ok: false, error: "The login was created but the customer record wasn't — check the database trigger (migration 0008)." };
+  // If the app-side record can't be finished, take the login back out — otherwise a retry fails with
+  // "already registered" and the person has a login with no customer record.
+  const id = await finishCustomerCreateDb(parsed.data.email, data.user.id, { name: parsed.data.name, phone }).catch(() => null);
+  if (id == null) {
+    await supabase.auth.admin.deleteUser(data.user.id).catch(() => {});
+    return { ok: false, error: "The customer couldn't be saved — nothing was created. Please try again." };
+  }
 
   await writeAuditLog({ actorUserId: auth.user.id, action: "customer.create", entity: "user", entityId: id, diff: { email: parsed.data.email } });
   refresh(id);

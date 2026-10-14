@@ -11,6 +11,7 @@ export function InboxItemActions({ kind, id, status }: { kind: InboxKind; id: nu
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const canToggle = (kind === "message" || kind === "enquiry") && status != null;
 
   return (
@@ -21,7 +22,9 @@ export function InboxItemActions({ kind, id, status }: { kind: InboxKind; id: nu
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              await setInboxStatusAction({ kind: kind as "message" | "enquiry", id, status: status === "new" ? "handled" : "new" });
+              setToggleError(null);
+              const result = await setInboxStatusAction({ kind: kind as "message" | "enquiry", id, status: status === "new" ? "handled" : "new" }).catch(() => null);
+              if (!result?.ok) setToggleError(result?.error ?? "Couldn't update — try again.");
               router.refresh();
             })
           }
@@ -29,6 +32,11 @@ export function InboxItemActions({ kind, id, status }: { kind: InboxKind; id: nu
         >
           {status === "new" ? "Mark handled" : "Mark new"}
         </button>
+      )}
+      {toggleError && (
+        <span role="alert" className="text-xs text-crit">
+          {toggleError}
+        </span>
       )}
       <button type="button" onClick={() => setDeleting(true)} className="text-sm font-medium text-crit underline-offset-4 hover:underline">
         Delete

@@ -39,7 +39,7 @@ export async function deleteInboxItemAction(kind: InboxKind, id: number, confirm
   if (confirm.trim().toLowerCase() !== "delete") return { ok: false, error: "Type delete to confirm." };
   const found = await deleteInboxItemDb(kind, id);
   if (!found) return { ok: false, error: "Not found." };
-  await writeAuditLog({ actorUserId: auth.user.id, action: `${ENTITY[kind]}.delete`, entity: ENTITY[kind], entityId: id, diff: {} });
+  await writeAuditLog({ actorUserId: auth.user.id, action: `${ENTITY[kind]}.delete`, entity: ENTITY[kind], entityId: id, diff: { contact: found.contact } });
   revalidatePath(kind === "lead" ? "/admin/leads" : "/admin/inbox");
   revalidatePath("/admin", "layout");
   return { ok: true, message: "Deleted." };
