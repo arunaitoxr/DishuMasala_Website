@@ -10,6 +10,13 @@ try {
 /** Override when :3000 is taken by something else, e.g. `TEST_BASE_URL=http://localhost:3001 pnpm test:e2e`. */
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3000";
 
+// These specs create and delete real records (orders, customers, reviews, coupons). They must never
+// run against the live site: the live database once ended up with ~300 test accounts — 80 of them
+// admin/staff — from a test run pointed at it. Local hosts only.
+if (!/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/.test(BASE_URL)) {
+  throw new Error(`Refusing to run E2E tests against ${BASE_URL} — local dev servers only.`);
+}
+
 /**
  * Playwright E2E config (PROMPTS.md Phase 3 item 7 is the first phase to need this — no config
  * existed before). Points at the already-running local dev server (CLAUDE.md's dev environment

@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { adminCredentials } from "./_helpers/admin";
+import { createPaidOrder } from "./_helpers/orders";
 
 /**
  * Real proof of PROMPTS.md Phase 7's acceptance criterion: "Admin is keyboard-operable end to
@@ -11,25 +11,9 @@ import { adminCredentials } from "./_helpers/admin";
  */
 const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
+/** A real, paid order (COD was removed — every order is prepaid). */
 async function createRealOrder(request: import("@playwright/test").APIRequestContext): Promise<string> {
-  const email = `admin-kbd-e2e-${randomUUID().slice(0, 8)}@example.com`;
-  const variantId = 1;
-  const validateRes = await request.post("/api/cart/validate", { data: { lines: [{ variantId, qty: 1 }], email } });
-  const totalPaise = (await validateRes.json()).pricing.totalPaise as number;
-  const res = await request.post("/api/checkout", {
-    data: {
-      idempotencyKey: randomUUID(),
-      email,
-      lines: [{ variantId, qty: 1 }],
-      paymentMethod: "cod",
-      shippingAddress: { name: "Keyboard E2E", phone: "9876543210", line1: "1 Test Lane", city: "Sangrur", state: "Punjab", pincode: "148001" },
-      customerNote: null,
-      clientTotalPaise: totalPaise,
-    },
-  });
-  const body = await res.json();
-  if (!body.ok) throw new Error(`Failed to create the real test order: ${JSON.stringify(body)}`);
-  return body.orderNumber as string;
+  return createPaidOrder(request);
 }
 
 test("admin is keyboard-operable: sidebar nav, DataTable rows, order detail dialogs", async ({ page, request }) => {
