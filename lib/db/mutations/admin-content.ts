@@ -1,10 +1,11 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { deleteObject, listImageFamily } from "@/lib/storage/storage";
 import { db } from "../index";
 import { pages, posts } from "../schema";
 import type { TiptapDoc } from "@/lib/content/tiptap-schema";
+import { POST_COVER_KEY } from "@/lib/content/cover-key";
 
 export interface PostInput {
   slug: string;
@@ -72,8 +73,18 @@ export async function unpublishPageDb(id: number): Promise<void> {
   await db.update(pages).set({ status: "draft", updatedAt: new Date() }).where(eq(pages.id, id));
 }
 
+/** Deletes a cover's files (every size) unless something still shows them. Keys are
+ * content-addressed, so the same picture used as a cover and inline in a body — or as the cover of
+ * another post — shares files; those stay. Only keys in the post-cover shape are ever touched. */
 async function deleteImageFiles(storageKey: string | null): Promise<void> {
-  if (!storageKey) return;
+  if (!storageKey || !POST_COVER_KEY.test(storageKey)) return;
+  const familyPrefix = storageKey.replace(/-w\d+\.webp$/, "-w");
+  const [asCover] = await db.select({ id: posts.id }).from(posts).where(sql`${posts.coverStorageKey} like ${`${familyPrefix}%`}`).limit(1);
+  if (asCover) return;
+  const [inPost] = await db.select({ id: posts.id }).from(posts).where(sql`${posts.body}::text like ${`%${familyPrefix}%`}`).limit(1);
+  if (inPost) return;
+  const [inPage] = await db.select({ id: pages.id }).from(pages).where(sql`${pages.body}::text like ${`%${familyPrefix}%`}`).limit(1);
+  if (inPage) return;
   const family = await listImageFamily(storageKey).catch(() => [storageKey]);
   for (const key of family) await deleteObject(key).catch(() => {});
 }

@@ -14,7 +14,8 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../index";
 import { products, reviewPhotos, reviews } from "../schema";
-import { deleteObject, listImageFamily } from "@/lib/storage/storage";
+import { deleteObject } from "@/lib/storage/storage";
+import { REVIEW_PHOTO_KEY } from "@/lib/reviews/photo-key";
 
 export type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -124,10 +125,15 @@ export async function updateReviewDb(id: number, input: Omit<StaffReviewInput, "
   };
 }
 
+/** Deletes review photo files whose rows are already gone. Review photos are single files (no
+ * size derivatives); only keys in the review-photo shape are touched, and a key another review
+ * still uses is kept. */
 async function deletePhotoFiles(storageKeys: string[]): Promise<void> {
   for (const key of storageKeys) {
-    const family = await listImageFamily(key).catch(() => [key]);
-    for (const k of family) await deleteObject(k).catch(() => {});
+    if (!REVIEW_PHOTO_KEY.test(key)) continue;
+    const [stillUsed] = await db.select({ id: reviewPhotos.id }).from(reviewPhotos).where(eq(reviewPhotos.storageKey, key)).limit(1);
+    if (stillUsed) continue;
+    await deleteObject(key).catch(() => {});
   }
 }
 

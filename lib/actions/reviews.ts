@@ -7,6 +7,7 @@ import { submitReview } from "@/lib/db/mutations/reviews";
 import { getProductBySlug } from "@/lib/db/queries/product-detail";
 import { getApprovedReviews, getHomepageReviewsPage, type ReviewSort } from "@/lib/db/queries/reviews";
 import { publicUrl } from "@/lib/storage/storage";
+import { REVIEW_PHOTO_KEY } from "@/lib/reviews/photo-key";
 
 const reviewSchema = z.object({
   productSlug: z.string().min(1),
@@ -16,8 +17,9 @@ const reviewSchema = z.object({
   title: z.string().trim().max(120).optional(),
   body: z.string().trim().min(10, "Say a bit more — at least 10 characters").max(4000),
   // Photo keys are produced only by app/api/reviews/upload/route.ts, which already validated
-  // type/size/EXIF server-side — this action re-checks the count, never trusts anything else.
-  photoR2Keys: z.array(z.string().min(1)).max(3, "Up to 3 photos"),
+  // type/size/EXIF server-side — this action re-checks the count and the key's shape, so a crafted
+  // submission can't attach (and later get staff to delete) some other file in the bucket.
+  photoR2Keys: z.array(z.string().regex(REVIEW_PHOTO_KEY, "Invalid photo")).max(3, "Up to 3 photos"),
 });
 
 export type ReviewFormInput = z.infer<typeof reviewSchema>;

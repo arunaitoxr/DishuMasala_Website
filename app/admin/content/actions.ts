@@ -25,6 +25,7 @@ import { isPostSlugTaken, isPageSlugTaken, getAdminPostById, getAdminPageById } 
 import { presignContentImageUpload, finalizeContentImageUpload } from "@/lib/storage/admin-upload";
 import { formatDateTime, fromISTDateTimeLocal } from "@/lib/dates";
 import { isRequiredPageSlug, isReservedRouteSlug } from "@/lib/content/page-slugs";
+import { POST_COVER_KEY } from "@/lib/content/cover-key";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
 
@@ -54,6 +55,8 @@ const postSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   excerpt: z.string().trim().max(400).nullable(),
   body: tiptapDocSchema,
+  // A new cover is always one the cover upload just made; an older cover saved before this rule
+  // is accepted only unchanged (checked in updatePostAction).
   coverStorageKey: z.string().trim().nullable(),
   coverAlt: z.string().trim().max(200).nullable(),
   author: z.string().trim().max(100).nullable(),
@@ -92,6 +95,7 @@ export async function createPostAction(input: z.infer<typeof postSchema>): Promi
   if (await isPostSlugTaken(parsed.data.slug)) return { ok: false, error: `The slug "${parsed.data.slug}" is already used.` };
 
   const dbInput = toPostDbInput(parsed.data);
+  if (dbInput.coverStorageKey && !POST_COVER_KEY.test(dbInput.coverStorageKey)) return { ok: false, error: "Upload the cover image again." };
   const id = await createPostDb(dbInput);
   await writeAuditLog({ actorUserId: auth.user.id, action: "post.create", entity: "post", entityId: id, diff: { slug: dbInput.slug, kind: dbInput.kind } });
   revalidateContent(dbInput.slug, dbInput.kind);
@@ -109,6 +113,9 @@ export async function updatePostAction(id: number, input: z.infer<typeof postSch
   if (await isPostSlugTaken(parsed.data.slug, id)) return { ok: false, error: `The slug "${parsed.data.slug}" is already used.` };
 
   const dbInput = toPostDbInput(parsed.data);
+  if (dbInput.coverStorageKey && dbInput.coverStorageKey !== existing.coverStorageKey && !POST_COVER_KEY.test(dbInput.coverStorageKey)) {
+    return { ok: false, error: "Upload the cover image again." };
+  }
   await updatePostDb(id, dbInput);
   // A replaced or removed cover leaves its old files behind otherwise.
   if (existing.coverStorageKey && existing.coverStorageKey !== dbInput.coverStorageKey) await deleteReplacedCoverFiles(existing.coverStorageKey);
