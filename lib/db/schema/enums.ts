@@ -27,6 +27,10 @@ export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "f
 
 export const reviewStatusEnum = pgEnum("review_status", ["pending", "approved", "rejected"]);
 
+/** Where a review came from: a shopper on the site (`customer` — their words, never edited by staff),
+ * entered by staff in the admin (`staff`), or imported from a CSV (`import`). */
+export const reviewSourceEnum = pgEnum("review_source", ["customer", "staff", "import"]);
+
 export const postKindEnum = pgEnum("post_kind", ["blog", "recipe"]);
 
 export type ContentStatus = (typeof contentStatusEnum.enumValues)[number];

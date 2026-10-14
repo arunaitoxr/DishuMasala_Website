@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import sharp from "sharp";
-import { adminCredentials } from "./_helpers/admin";
+import { signInAsAdmin } from "./_helpers/admin-session";
 
 /**
  * Products CRUD end to end (client request, 2026-10-14): validation that used to crash the editor
@@ -9,15 +9,8 @@ import { adminCredentials } from "./_helpers/admin";
  * primary / delete, publish, then delete (archive) → restore → delete permanently, checking the
  * storefront at each step.
  */
-const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(ADMIN_EMAIL);
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/account\/?$/, { timeout: 15_000 });
-}
+const signIn = signInAsAdmin;
 
 function image(r: number, g: number, b: number) {
   return sharp({ create: { width: 60, height: 60, channels: 3, background: { r, g, b } } }).png().toBuffer();

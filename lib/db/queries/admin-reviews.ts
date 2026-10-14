@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "../index";
 import { products, reviewPhotos, reviews } from "../schema";
 
@@ -16,12 +16,17 @@ export interface AdminReviewRow {
   body: string;
   status: "pending" | "approved" | "rejected";
   verifiedBuyer: boolean;
+  /** customer = submitted on the site (not editable); staff / import = entered by the team. */
+  source: "customer" | "staff" | "import";
   createdAt: Date;
   photoCount: number;
 }
 
 export interface AdminReviewFilters {
   status?: "pending" | "approved" | "rejected";
+  source?: "customer" | "staff" | "import";
+  /** Matches the reviewer's name, the title or the review text. */
+  search?: string;
   productId?: number;
   rating?: number;
   page: number;
@@ -32,6 +37,11 @@ const PAGE_SIZE = 20;
 export async function listAdminReviews(filters: AdminReviewFilters): Promise<{ rows: AdminReviewRow[]; total: number }> {
   const conditions = [];
   if (filters.status) conditions.push(eq(reviews.status, filters.status));
+  if (filters.source) conditions.push(eq(reviews.source, filters.source));
+  if (filters.search?.trim()) {
+    const term = `%${filters.search.trim()}%`;
+    conditions.push(or(ilike(reviews.authorName, term), ilike(reviews.title, term), ilike(reviews.body, term))!);
+  }
   if (filters.productId) conditions.push(eq(reviews.productId, filters.productId));
   if (filters.rating) conditions.push(eq(reviews.rating, filters.rating));
   const where = conditions.length ? and(...conditions) : undefined;
@@ -54,6 +64,7 @@ export async function listAdminReviews(filters: AdminReviewFilters): Promise<{ r
         body: reviews.body,
         status: reviews.status,
         verifiedBuyer: reviews.verifiedBuyer,
+        source: reviews.source,
         createdAt: reviews.createdAt,
         photoCount: sql<number>`(select count(*) from ${reviewPhotos} where ${reviewPhotos.reviewId} = ${reviews.id})`,
       })
@@ -89,6 +100,7 @@ export async function getAdminReviewById(id: number): Promise<AdminReviewDetail 
       body: reviews.body,
       status: reviews.status,
       verifiedBuyer: reviews.verifiedBuyer,
+      source: reviews.source,
       createdAt: reviews.createdAt,
     })
     .from(reviews)
@@ -113,6 +125,11 @@ export async function getPendingReviewIds(filters: { productId?: number; rating?
   return rows.map((r) => r.id);
 }
 
-export async function listProductsForReviewFilter(): Promise<{ id: number; name: string }[]> {
-  return db.select({ id: products.id, name: products.name }).from(products).orderBy(asc(products.name));
+export async function listProductsForReviewFilter(): Promise<{ id: number; name: string; slug: string }[]> {
+  // Deleted (archived) products take no new reviews and aren't worth filtering by.
+  return db
+    .select({ id: products.id, name: products.name, slug: products.slug })
+    .from(products)
+    .where(ne(products.status, "archived"))
+    .orderBy(asc(products.name), asc(products.slug));
 }

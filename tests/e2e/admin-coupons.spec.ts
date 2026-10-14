@@ -1,21 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import { adminCredentials } from "./_helpers/admin";
+import { signInAsAdmin } from "./_helpers/admin-session";
 
 /**
  * Coupons end to end (client request, 2026-10-13): staff create a fixed and a capped percentage coupon
  * in the admin, the capped one is applied in the real cart and gives exactly its upper limit, an
  * IST start time survives a save unchanged, and both are deleted behind the typed confirmation.
  */
-const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = adminCredentials();
 
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(ADMIN_EMAIL);
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/account\/?$/, { timeout: 15_000 });
-}
+const signIn = signInAsAdmin;
 
 async function createCoupon(page: Page, fill: (page: Page) => Promise<void>): Promise<string> {
   await page.goto("/admin/coupons/new");

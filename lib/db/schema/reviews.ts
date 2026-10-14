@@ -1,6 +1,6 @@
 import { boolean, check, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { reviewStatusEnum } from "./enums";
+import { reviewSourceEnum, reviewStatusEnum } from "./enums";
 import { products } from "./catalog";
 import { orders } from "./orders";
 import { users } from "./users";
@@ -19,6 +19,7 @@ export const reviews = pgTable("reviews", {
   body: text().notNull(),
   status: reviewStatusEnum().notNull().default("pending"),
   verifiedBuyer: boolean("verified_buyer").notNull().default(false),
+  source: reviewSourceEnum().notNull().default("customer"),
   // SHA-256 hex digest of the submitter's IP, never the raw IP (CLAUDE.md has no "don't log raw
   // IPs" rule written down, but hashing costs nothing and avoids storing PII we don't need) — used
   // only for the DB-backed rate limit in lib/db/mutations/reviews.ts. Nullable because it's not

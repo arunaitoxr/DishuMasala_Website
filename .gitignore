@@ -44,3 +44,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Saved E2E admin session (tests/e2e/_helpers/admin-session.ts) — contains auth cookies
+tests/e2e/_storage/admin-session.json

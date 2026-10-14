@@ -13,7 +13,7 @@ if (!process.env.DATABASE_URL && existsSync(".env")) {
  * live." Creates a real `pending` review directly in Postgres, confirms the storefront's own
  * approved-reviews query (lib/db/queries/reviews.ts's `fetchApprovedReviews`/`fetchReviewSummary` —
  * exactly what the PDP and its JSON-LD AggregateRating read, both scoped to `status = 'approved'`)
- * excludes it while pending, calls the real `approveReviewAction`, and confirms it now appears.
+ * excludes it while pending, calls the real `setReviewStatusAction` (publish), and confirms it now appears.
  * (Queried here via the same WHERE-clause condition directly, not through `getApprovedReviews`
  * itself — that wrapper's `unstable_cache` requires a real Next request's incremental-cache
  * context that doesn't exist in a plain Vitest/Node run; the underlying condition it filters on is
@@ -85,7 +85,7 @@ afterAll(async () => {
 });
 
 describe("review approval makes it appear live on the storefront", () => {
-  it("is absent from getApprovedReviews/getReviewSummary while pending, present after approveReviewAction", async () => {
+  it("is absent from getApprovedReviews/getReviewSummary while pending, present after setReviewStatusAction publishes it", async () => {
     mockAuth.mockResolvedValue({ user: { id: String(staffUserId), role: "staff" } });
 
     async function approvedCountFor(id: number): Promise<number> {
@@ -99,8 +99,8 @@ describe("review approval makes it appear live on the storefront", () => {
 
     expect(await approvedCountFor(reviewId)).toBe(0);
 
-    const { approveReviewAction } = await import("@/app/admin/reviews/actions");
-    const result = await approveReviewAction({ id: reviewId });
+    const { setReviewStatusAction } = await import("@/app/admin/reviews/actions");
+    const result = await setReviewStatusAction({ id: reviewId, status: "approved" });
     expect(result.ok).toBe(true);
 
     const { rows } = await dbClient.query<{ status: string; moderated_by: number | null }>(
