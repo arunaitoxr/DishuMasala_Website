@@ -44,3 +44,28 @@ describe("matchProduct", () => {
     expect(matchProduct("Coriander", products)).toBeNull();
   });
 });
+
+describe("parseReviewCsv — quotes and dates", () => {
+  const header = "product,reviewer_name,rating,review,date\n";
+
+  it("treats a quote in the middle of a field as text, not the start of a quoted field", () => {
+    const { rows, errors } = parseReviewCsv(header + 'A,Asha,5,The 2" pack is great\nB,Ravi,4,Good\nC,Mona,3,Fine');
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => r.reviewerName)).toEqual(["Asha", "Ravi", "Mona"]);
+    expect(rows[0].review).toBe('The 2" pack is great');
+  });
+
+  it("reports a quoted field that is never closed instead of swallowing the rest of the file", () => {
+    const { rows, errors } = parseReviewCsv(header + 'A,Asha,5,"never closed\nB,Ravi,4,Good');
+    expect(rows).toEqual([]);
+    expect(errors[0].line).toBe(2);
+  });
+
+  it("accepts today's date at any hour and refuses tomorrow", () => {
+    const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 29.5 * 3600_000).toISOString().slice(0, 10);
+    const { rows, errors } = parseReviewCsv(header + `A,Asha,5,Today,${today}\nB,Ravi,4,Tomorrow,${tomorrow}`);
+    expect(rows.map((r) => r.reviewerName)).toEqual(["Asha"]);
+    expect(errors).toEqual([{ line: 3, message: "date is in the future" }]);
+  });
+});

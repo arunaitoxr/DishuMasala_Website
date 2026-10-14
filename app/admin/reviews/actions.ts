@@ -22,7 +22,7 @@ import {
   type ReviewStatus,
   type ReviewTarget,
 } from "@/lib/db/mutations/admin-reviews";
-import { getPendingReviewIds, listProductsForReviewFilter } from "@/lib/db/queries/admin-reviews";
+import { getPendingReviewIds, getReviewFingerprints, listProductsForReviewFilter, reviewFingerprint } from "@/lib/db/queries/admin-reviews";
 import { matchProduct, parseReviewCsv } from "@/lib/reviews/csv";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
@@ -46,6 +46,9 @@ function refreshReviews(targets: ReviewTarget[]) {
     if (t.productSlug) revalidatePath(`/product/${t.productSlug}`);
   }
   updateTag("reviews");
+  // Star ratings on product cards (shop, collections, search, related products) are cached with
+  // the product listings, not with the reviews.
+  updateTag("products");
   revalidatePath("/");
   revalidatePath("/admin/reviews");
   revalidatePath("/admin");
@@ -83,7 +86,12 @@ export async function setReviewStatusAction(input: z.infer<typeof statusSchema>)
   return { ok: true, message: STATUS_MESSAGE[parsed.data.status] };
 }
 
-const bulkSchema = z.object({ productId: z.number().int().positive().optional(), rating: z.number().int().min(1).max(5).optional() });
+const bulkSchema = z.object({
+  productId: z.number().int().positive().optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  source: z.enum(["customer", "staff", "import"]).optional(),
+  search: z.string().trim().max(200).optional(),
+});
 
 export async function bulkApproveReviewsAction(input: z.infer<typeof bulkSchema>): Promise<AdminResult> {
   const auth = await requireStaff();
@@ -196,29 +204,45 @@ export async function deleteReviewPhotoAction(reviewId: number, photoId: number,
 // CSV import
 // -------------------------------------------------------------------------------------------
 
-const MAX_CSV_BYTES = 2 * 1024 * 1024;
+// Server actions accept bodies up to 1 MB; the file travels inside one, so stay under that.
+const MAX_CSV_BYTES = 900 * 1024;
 const MAX_ROWS = 5000;
 
 export interface CsvPreview {
   ready: number;
+  /** Rows identical (product, reviewer, text) to a review already on the site, or earlier in the file. */
+  duplicates: number;
   invalid: { line: number; message: string }[];
   unmatched: { line: number; product: string }[];
   sample: { product: string; reviewerName: string; rating: number; review: string; date: string | null }[];
 }
 
 async function analyseCsv(text: string) {
-  if (text.length > MAX_CSV_BYTES) return { error: "The file is larger than 2 MB — split it into smaller files." } as const;
+  if (new TextEncoder().encode(text).length > MAX_CSV_BYTES) return { error: "The file is larger than 900 KB — split it into smaller files." } as const;
   const { rows, errors } = parseReviewCsv(text);
   if (rows.length > MAX_ROWS) return { error: `The file has ${rows.length} reviews; import at most ${MAX_ROWS} at a time.` } as const;
   const products = await listProductsForReviewFilter();
   const matched: { row: (typeof rows)[number]; productId: number; productName: string }[] = [];
   const unmatched: CsvPreview["unmatched"] = [];
+  const found: { row: (typeof rows)[number]; productId: number; productName: string }[] = [];
   for (const row of rows) {
     const product = matchProduct(row.product, products);
-    if (product) matched.push({ row, productId: product.id, productName: product.name });
+    if (product) found.push({ row, productId: product.id, productName: product.name });
     else unmatched.push({ line: row.line, product: row.product });
   }
-  return { matched, unmatched, invalid: errors } as const;
+  // Importing the same file twice (or a file that overlaps an earlier one) mustn't double reviews.
+  const seen = await getReviewFingerprints([...new Set(found.map((f) => f.productId))]);
+  let duplicates = 0;
+  for (const f of found) {
+    const key = reviewFingerprint(f.productId, f.row.reviewerName, f.row.review);
+    if (seen.has(key)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(key);
+    matched.push(f);
+  }
+  return { matched, unmatched, duplicates, invalid: errors } as const;
 }
 
 /** Step 1: parse and match without writing anything, so staff see exactly what will be imported. */
@@ -232,6 +256,7 @@ export async function previewReviewCsvAction(text: string): Promise<AdminResult<
     message: "Preview ready.",
     data: {
       ready: result.matched.length,
+      duplicates: result.duplicates,
       invalid: result.invalid.slice(0, 50),
       unmatched: result.unmatched.slice(0, 50),
       sample: result.matched.slice(0, 5).map(({ row, productName }) => ({
@@ -251,7 +276,9 @@ export async function importReviewCsvAction(text: string, publish: boolean): Pro
   if (!auth.ok) return auth;
   const result = await analyseCsv(text);
   if ("error" in result) return { ok: false, error: result.error! };
-  if (result.matched.length === 0) return { ok: false, error: "Nothing to import — no valid rows matched a product." };
+  if (result.matched.length === 0) {
+    return { ok: false, error: result.duplicates > 0 ? "Nothing new to import — every valid row is already on the site." : "Nothing to import — no valid rows matched a product." };
+  }
 
   const status: ReviewStatus = publish ? "approved" : "pending";
   const affected = await importReviewsDb(
@@ -272,7 +299,7 @@ export async function importReviewCsvAction(text: string, publish: boolean): Pro
     action: "review.import",
     entity: "review",
     entityId: "bulk",
-    diff: { imported: result.matched.length, status, skipped: result.invalid.length + result.unmatched.length },
+    diff: { imported: result.matched.length, status, skipped: result.invalid.length + result.unmatched.length, duplicates: result.duplicates },
   });
   refreshReviews(affected);
   const n = result.matched.length;

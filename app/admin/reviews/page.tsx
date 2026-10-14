@@ -38,7 +38,7 @@ export default async function AdminReviewsPage({ searchParams }: PageProps) {
   const [{ rows, total }, products, pendingIds] = await Promise.all([
     listAdminReviews({ status, source, search, productId, rating, page }),
     listProductsForReviewFilter(),
-    getPendingReviewIds({ productId, rating }),
+    getPendingReviewIds({ productId, rating, source, search }),
   ]);
 
   function hrefFor(overrides: Record<string, string | undefined>): string {
@@ -150,7 +150,7 @@ export default async function AdminReviewsPage({ searchParams }: PageProps) {
         {(status || source || search || productId || rating) && (
           <Link href="/admin/reviews" className="text-sm text-ink-2 underline underline-offset-4">Clear all</Link>
         )}
-        <BulkApproveButton productId={productId} rating={rating} pendingCount={pendingIds.length} />
+        <BulkApproveButton productId={productId} rating={rating} source={source} search={search} pendingCount={pendingIds.length} />
       </form>
 
       <div className="mt-5">

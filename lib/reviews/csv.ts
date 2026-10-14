@@ -24,15 +24,21 @@ export interface ReviewCsvParse {
   errors: { line: number; message: string }[];
 }
 
-/** RFC 4180-style CSV: quoted fields, doubled quotes, commas and newlines inside quotes, BOM, CRLF. */
-export function parseCsvText(text: string): string[][] {
+/** RFC 4180-style CSV: quoted fields, doubled quotes, commas and newlines inside quotes, BOM, CRLF.
+ * A quote opens a quoted field only at the start of a field — `The 2" pack` is plain text, not the
+ * start of a field that would swallow every following row. `unclosedQuoteLine` is set when the file
+ * ends inside a quoted field (the 1-based line where that field began). */
+export function parseCsvText(text: string): { table: string[][]; unclosedQuoteLine: number | null } {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
   let inQuotes = false;
-  const src = text.replace(/^﻿/, "");
+  let line = 1;
+  let quoteStartLine = 0;
+  const src = text.replace(/^\uFEFF/, "");
   for (let i = 0; i < src.length; i += 1) {
     const c = src[i];
+    if (c === "\n") line += 1;
     if (inQuotes) {
       if (c === '"') {
         if (src[i + 1] === '"') {
@@ -44,8 +50,10 @@ export function parseCsvText(text: string): string[][] {
       } else {
         field += c;
       }
-    } else if (c === '"') {
+    } else if (c === '"' && field.trim() === "") {
       inQuotes = true;
+      quoteStartLine = line;
+      field = "";
     } else if (c === ",") {
       row.push(field);
       field = "";
@@ -62,7 +70,7 @@ export function parseCsvText(text: string): string[][] {
     row.push(field);
     rows.push(row);
   }
-  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+  return { table: rows.filter((r) => r.some((cell) => cell.trim() !== "")), unclosedQuoteLine: inQuotes ? quoteStartLine : null };
 }
 
 /** Noon IST on the given day (a date with no time shouldn't drift across midnight), `null` when the
@@ -81,8 +89,11 @@ function parseDate(value: string): Date | null | "invalid" {
 }
 
 export function parseReviewCsv(text: string): ReviewCsvParse {
-  const table = parseCsvText(text);
+  const { table, unclosedQuoteLine } = parseCsvText(text);
   const errors: ReviewCsvParse["errors"] = [];
+  if (unclosedQuoteLine != null) {
+    return { rows: [], errors: [{ line: unclosedQuoteLine, message: "A quoted field starting on this line is never closed — check for a missing \" in the file." }] };
+  }
   if (table.length === 0) return { rows: [], errors: [{ line: 1, message: "The file is empty." }] };
 
   const header = table[0].map((h) => h.trim().toLowerCase());
@@ -114,7 +125,8 @@ export function parseReviewCsv(text: string): ReviewCsvParse {
       !get(idx.review) && "no review text",
       !(Number.isInteger(rating) && rating >= 1 && rating <= 5) && "rating must be 1–5",
       date === "invalid" && "date must be YYYY-MM-DD or DD/MM/YYYY",
-      date instanceof Date && date.getTime() > Date.now() && "date is in the future",
+      // Dates are stored as noon IST, so "today" is fine at any hour: only a later day is refused.
+      date instanceof Date && date.getTime() > Date.now() + 12 * 3600_000 && "date is in the future",
     ].filter(Boolean);
     if (problems.length > 0) {
       errors.push({ line, message: problems.join(", ") });

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "../index";
 import { products, reviewPhotos, reviews } from "../schema";
 
@@ -34,7 +34,9 @@ export interface AdminReviewFilters {
 
 const PAGE_SIZE = 20;
 
-export async function listAdminReviews(filters: AdminReviewFilters): Promise<{ rows: AdminReviewRow[]; total: number }> {
+/** The list's filters as SQL — shared by the list and by bulk publish, so "publish what matches"
+ * means exactly the rows on screen. */
+function reviewFilterConditions(filters: Omit<AdminReviewFilters, "page">) {
   const conditions = [];
   if (filters.status) conditions.push(eq(reviews.status, filters.status));
   if (filters.source) conditions.push(eq(reviews.source, filters.source));
@@ -44,6 +46,11 @@ export async function listAdminReviews(filters: AdminReviewFilters): Promise<{ r
   }
   if (filters.productId) conditions.push(eq(reviews.productId, filters.productId));
   if (filters.rating) conditions.push(eq(reviews.rating, filters.rating));
+  return conditions;
+}
+
+export async function listAdminReviews(filters: AdminReviewFilters): Promise<{ rows: AdminReviewRow[]; total: number }> {
+  const conditions = reviewFilterConditions(filters);
   const where = conditions.length ? and(...conditions) : undefined;
 
   // Pending first (PROMPTS.md's explicit "pending reviews first"), regardless of the status
@@ -115,12 +122,10 @@ export async function getAdminReviewById(id: number): Promise<AdminReviewDetail 
   return { ...row, photoCount: photoRows.length, photos: photoRows.map((p) => ({ id: p.id, storageKey: p.storageKey, url: publicUrl(p.storageKey) })) };
 }
 
-/** Ids of every pending review matching the given product/rating filter — backs "bulk approve"
- * (approve every pending review in the current filtered view in one action). */
-export async function getPendingReviewIds(filters: { productId?: number; rating?: number }): Promise<number[]> {
-  const conditions = [eq(reviews.status, "pending")];
-  if (filters.productId) conditions.push(eq(reviews.productId, filters.productId));
-  if (filters.rating) conditions.push(eq(reviews.rating, filters.rating));
+/** Ids of every pending review matching the list's current filters (source, search, product,
+ * rating) — backs "bulk approve" (approve every pending review in the current filtered view). */
+export async function getPendingReviewIds(filters: Omit<AdminReviewFilters, "page" | "status">): Promise<number[]> {
+  const conditions = reviewFilterConditions({ ...filters, status: "pending" });
   const rows = await db.select({ id: reviews.id }).from(reviews).where(and(...conditions));
   return rows.map((r) => r.id);
 }
@@ -132,4 +137,19 @@ export async function listProductsForReviewFilter(): Promise<{ id: number; name:
     .from(products)
     .where(ne(products.status, "archived"))
     .orderBy(asc(products.name), asc(products.slug));
+}
+
+/** "product|author|body" keys of the reviews already on these products — the CSV import skips rows
+ * that match one, so importing the same file twice doesn't double every review. */
+export async function getReviewFingerprints(productIds: number[]): Promise<Set<string>> {
+  if (productIds.length === 0) return new Set();
+  const rows = await db
+    .select({ productId: reviews.productId, authorName: reviews.authorName, body: reviews.body })
+    .from(reviews)
+    .where(inArray(reviews.productId, productIds));
+  return new Set(rows.map((r) => reviewFingerprint(r.productId, r.authorName, r.body)));
+}
+
+export function reviewFingerprint(productId: number, authorName: string, body: string): string {
+  return `${productId}|${authorName.trim().toLowerCase()}|${body.trim().replace(/\s+/g, " ")}`;
 }

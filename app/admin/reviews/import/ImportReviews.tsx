@@ -22,17 +22,21 @@ export function ImportReviews() {
     setDone(null);
     setPreview(null);
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError("The file is larger than 2 MB — split it into smaller files.");
+    if (file.size > 900 * 1024) {
+      setError("The file is larger than 900 KB — split it into smaller files.");
       return;
     }
     const content = await file.text();
     setText(content);
     setFileName(file.name);
     startTransition(async () => {
-      const result = await previewReviewCsvAction(content);
-      if (!result.ok) setError(result.error);
-      else setPreview(result.data ?? null);
+      try {
+        const result = await previewReviewCsvAction(content);
+        if (!result.ok) setError(result.error);
+        else setPreview(result.data ?? null);
+      } catch {
+        setError("The file couldn't be read on the server — try a smaller file.");
+      }
     });
   }
 
@@ -40,7 +44,7 @@ export function ImportReviews() {
     if (!text) return;
     setError(null);
     startTransition(async () => {
-      const result = await importReviewCsvAction(text, publish);
+      const result = await importReviewCsvAction(text, publish).catch(() => ({ ok: false as const, error: "The import didn't go through — nothing was saved. Try again." }));
       if (!result.ok) {
         setError(result.error);
         return;
@@ -59,7 +63,7 @@ export function ImportReviews() {
         <input id="csv" type="file" accept=".csv,text/csv" onChange={(e) => void onFile(e.target.files?.[0])} className="block text-sm text-ink" />
         <p className="text-xs text-ink-3">
           Columns: <code>product</code> (name or slug), <code>reviewer_name</code>, <code>rating</code> (1–5), <code>review</code>; optional <code>title</code>,{" "}
-          <code>date</code> (YYYY-MM-DD or DD/MM/YYYY), <code>email</code>. Max 2 MB.
+          <code>date</code> (YYYY-MM-DD or DD/MM/YYYY), <code>email</code>. Max 900 KB. Rows already on the site are skipped.
         </p>
       </section>
 
@@ -73,6 +77,7 @@ export function ImportReviews() {
           <p className="text-sm text-ink">
             <strong>{preview.ready}</strong> review{preview.ready === 1 ? "" : "s"} ready to import
             {preview.invalid.length + preview.unmatched.length > 0 && <> · {preview.invalid.length + preview.unmatched.length} will be skipped</>}
+            {preview.duplicates > 0 && <> · {preview.duplicates} already on the site (skipped)</>}
           </p>
           {preview.sample.length > 0 && (
             <ul className="space-y-2 text-sm">

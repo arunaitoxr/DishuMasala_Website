@@ -6,9 +6,21 @@ import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/Dialog";
 import { bulkApproveReviewsAction } from "./actions";
 
-/** Publishes every pending review in the current product/rating filter — after a confirmation that
+/** Publishes every pending review in the current filter (product, rating, source, search) — after a confirmation that
  * says exactly how many (with no filter it used to publish every pending review site-wide on one click). */
-export function BulkApproveButton({ productId, rating, pendingCount }: { productId?: number; rating?: number; pendingCount: number }) {
+export function BulkApproveButton({
+  productId,
+  rating,
+  source,
+  search,
+  pendingCount,
+}: {
+  productId?: number;
+  rating?: number;
+  source?: "customer" | "staff" | "import";
+  search?: string;
+  pendingCount: number;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -18,7 +30,7 @@ export function BulkApproveButton({ productId, rating, pendingCount }: { product
 
   function run() {
     startTransition(async () => {
-      const result = await bulkApproveReviewsAction({ productId, rating });
+      const result = await bulkApproveReviewsAction({ productId, rating, source, search });
       setMessage(result.ok ? result.message : result.error);
       setOpen(false);
       router.refresh();
