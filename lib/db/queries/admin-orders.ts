@@ -35,12 +35,22 @@ export interface AdminOrderFilters {
   page: number;
 }
 
+/** A real calendar day (yyyy-mm-dd) — "2026-13-01" matches the shape but is no date, and would
+ * throw when turned into a query bound. */
+const isoDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00.000Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
+  });
+
 const filtersSchema = z
   .object({
     status: z.enum(ORDER_STATUSES).optional(),
     method: z.enum(PAYMENT_METHODS).optional(),
-    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    from: isoDay.optional(),
+    to: isoDay.optional(),
     q: z.string().trim().min(1).max(200).optional(),
     sort: z.enum(ADMIN_ORDER_SORTS).optional(),
     dir: z.enum(["asc", "desc"]).optional(),
@@ -56,8 +66,12 @@ export function parseAdminOrderFilters(raw: Record<string, string | string[] | u
     const v = Array.isArray(value) ? value[0] : value;
     if (v !== "") flat[key] = v;
   }
-  const parsed = filtersSchema.safeParse(flat);
-  const p = parsed.success ? parsed.data : {};
+  // Field by field, so one bad value (a hand-edited date) drops only that filter, not all of them.
+  const p: Partial<z.infer<typeof filtersSchema>> = {};
+  for (const key of Object.keys(filtersSchema.shape) as (keyof typeof filtersSchema.shape)[]) {
+    const field = filtersSchema.shape[key].safeParse(flat[key]);
+    if (field.success && field.data !== undefined) Object.assign(p, { [key]: field.data });
+  }
   return {
     status: p.status,
     paymentMethod: p.method,
@@ -123,6 +137,9 @@ export interface AdminOrderRow {
   placedAt: Date;
   shiprocketOrderId: string | null;
   awb: string | null;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  refundedAt: Date | null;
 }
 
 const ROW_SELECT = {
@@ -137,6 +154,9 @@ const ROW_SELECT = {
   placedAt: orders.placedAt,
   shiprocketOrderId: orders.shiprocketOrderId,
   awb: orders.awb,
+  razorpayOrderId: orders.razorpayOrderId,
+  razorpayPaymentId: orders.razorpayPaymentId,
+  refundedAt: orders.refundedAt,
 };
 
 interface RawOrderRow {
@@ -151,6 +171,9 @@ interface RawOrderRow {
   placedAt: Date;
   shiprocketOrderId: string | null;
   awb: string | null;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  refundedAt: Date | null;
 }
 
 function toRow(row: RawOrderRow): AdminOrderRow {

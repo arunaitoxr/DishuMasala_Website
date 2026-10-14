@@ -348,6 +348,11 @@ export async function deleteUnpaidOrderAction(orderId: number, confirmNumber: st
     entityId: orderId,
     diff: { orderNumber: order.orderNumber, email: order.email, totalPaise: order.totalPaise, paymentStatus: order.paymentStatus },
   });
+  if (result.affectedProductSlugs.length > 0) {
+    updateTag("products");
+    for (const slug of result.affectedProductSlugs) updateTag(`product:${slug}`);
+    for (const slug of result.affectedCollectionSlugs) updateTag(`collection:${slug}`);
+  }
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
   return { ok: true, message: `Order ${order.orderNumber} deleted.` };

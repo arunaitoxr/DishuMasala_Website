@@ -58,7 +58,9 @@ test("admin is keyboard-operable: sidebar nav, DataTable rows, order detail dial
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(new RegExp(`q=${orderNumber}`));
 
-  const targetRow = page.locator(`tr[data-row-href="/admin/orders/${orderNumber}"]`);
+  // The router keeps the previous (unfiltered) list in the DOM, hidden — and it lists this new order
+  // too — so pick the row that's actually on screen.
+  const targetRow = page.locator(`tr[data-row-href="/admin/orders/${orderNumber}"]`).filter({ visible: true });
   await expect(targetRow).toBeVisible();
   await targetRow.focus();
   await expect(targetRow).toBeFocused();

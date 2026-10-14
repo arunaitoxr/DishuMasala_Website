@@ -10,6 +10,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "../index";
 import { auditLog, couponRedemptions, orders, orderItems, variants, products, collections } from "../schema";
 import { validateStatusTransition } from "@/lib/commerce/order-status";
+import { orderDeletability } from "@/lib/commerce/order-delete";
 import type { OrderStatus } from "@/types/order";
 
 export type TransitionResult =
@@ -154,7 +155,9 @@ export async function cancelOrderDb(orderId: number, reason: string): Promise<Ca
   });
 }
 
-export type DeleteOrderOutcome = { ok: true } | { ok: false; error: string };
+export type DeleteOrderOutcome =
+  | { ok: true; affectedProductSlugs: string[]; affectedCollectionSlugs: string[] }
+  | { ok: false; error: string };
 
 /**
  * Deletes an order that was never paid — an abandoned or failed checkout, a test — with its line
@@ -172,21 +175,27 @@ export async function deleteUnpaidOrderDb(orderId: number): Promise<DeleteOrderO
         razorpayPaymentId: orders.razorpayPaymentId,
         shiprocketOrderId: orders.shiprocketOrderId,
         refundedAt: orders.refundedAt,
+        razorpayOrderId: orders.razorpayOrderId,
+        placedAt: orders.placedAt,
       })
       .from(orders)
       .where(eq(orders.id, orderId))
       .for("update")
       .limit(1);
     if (!order) return { ok: false, error: "Order not found." };
-    const neverPaid =
-      (order.paymentStatus === "pending" || order.paymentStatus === "failed") &&
-      !order.razorpayPaymentId &&
-      !order.refundedAt &&
-      !order.shiprocketOrderId &&
-      (order.status === "pending" || order.status === "cancelled");
-    if (!neverPaid) return { ok: false, error: "Only orders that were never paid can be deleted. Cancel or refund this one instead." };
+    const deletability = orderDeletability(order);
+    if (!deletability.deletable) return { ok: false, error: deletability.reason };
 
-    if (order.paymentStatus === "pending" && order.status === "pending") {
+    // The storefront shows stock, so the products this order held stock for need refreshing.
+    const lineProductRows = await tx
+      .select({ productSlug: products.slug, collectionSlug: collections.slug })
+      .from(orderItems)
+      .innerJoin(variants, eq(variants.id, orderItems.variantId))
+      .innerJoin(products, eq(products.id, variants.productId))
+      .innerJoin(collections, eq(collections.id, products.collectionId))
+      .where(eq(orderItems.orderId, orderId));
+    const released = order.paymentStatus === "pending" && order.status === "pending";
+    if (released) {
       await tx.execute(sql`
         UPDATE ${variants}
         SET stock_qty = stock_qty + oi.qty, in_stock = true
@@ -198,6 +207,10 @@ export async function deleteUnpaidOrderDb(orderId: number): Promise<DeleteOrderO
     await tx.delete(orderItems).where(eq(orderItems.orderId, orderId));
     await tx.delete(auditLog).where(and(eq(auditLog.entity, "order"), eq(auditLog.entityId, String(orderId))));
     await tx.delete(orders).where(eq(orders.id, orderId));
-    return { ok: true };
+    return {
+      ok: true,
+      affectedProductSlugs: released ? Array.from(new Set(lineProductRows.map((r) => r.productSlug))) : [],
+      affectedCollectionSlugs: released ? Array.from(new Set(lineProductRows.map((r) => r.collectionSlug))) : [],
+    };
   });
 }

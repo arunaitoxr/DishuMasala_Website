@@ -15,6 +15,7 @@ import {
 import { formatDateTime } from "@/lib/dates";
 import { RowActions } from "@/components/admin/RowActions";
 import { deleteUnpaidOrderAction } from "./actions";
+import { orderDeletability } from "@/lib/commerce/order-delete";
 
 export const metadata = { title: "Orders" };
 
@@ -49,7 +50,7 @@ interface OrdersPageProps {
  * exact query the perf-test report (scripts/seed-perf-orders.ts) times against 5,000 rows.
  */
 function isNeverPaid(r: AdminOrderRow): boolean {
-  return (r.paymentStatus === "pending" || r.paymentStatus === "failed") && (r.status === "pending" || r.status === "cancelled") && !r.shiprocketOrderId;
+  return orderDeletability(r).deletable;
 }
 
 export default async function AdminOrdersPage({ searchParams }: OrdersPageProps) {

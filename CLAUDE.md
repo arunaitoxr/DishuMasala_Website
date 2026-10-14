@@ -490,6 +490,14 @@ calls `revalidateTag`. Destructive actions need typed confirmation and prefer so
 keyboard-navigable with real pagination and URL-driven filters. Optimistic UI is fine; silent
 failure is not.
 
+**Amended (2026-10-13, client request): never-paid orders can be deleted.** The client asked to
+clear out abandoned and test checkouts. A paid, refunded, shipped or COD-confirmed order is still
+never deletable — cancel or refund it. Deletion is typed-confirmation, audited as `order_deleted`,
+releases any stock the order still held, and the rule lives in one place
+(`lib/commerce/order-delete.ts`). A Razorpay checkout becomes deletable only 72 hours after it was
+placed, because a retried or slow UPI payment can still be captured against it; deleting it earlier
+would leave a captured payment with no order.
+
 ---
 
 ## 10. Deployment
