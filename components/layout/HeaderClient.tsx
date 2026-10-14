@@ -8,7 +8,6 @@ import { useSession } from "@/components/providers/SessionProvider";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerTitle, DrawerTrigger } from "@/components/ui/Drawer";
 import type { MegaMenuColumn } from "@/lib/nav";
 import { cn } from "@/lib/cn";
-import { formatINR, type Paise } from "@/lib/money";
 import type { SiteBranding } from "@/lib/db/queries/settings";
 import { useCartStore, selectItemCount } from "@/lib/store/cart";
 import { useWishlistStore, selectWishlistCount } from "@/lib/store/wishlist";
@@ -18,7 +17,8 @@ const ANNOUNCEMENT_DISMISSED_KEY = "dm-announcement-dismissed";
 
 export interface HeaderClientProps {
   columns: MegaMenuColumn[];
-  freeShippingThresholdPaise: Paise;
+  /** The top strip's text, from Settings (already resolved on the server). */
+  announcement: string;
   logo: SiteBranding["logo"];
 }
 
@@ -137,7 +137,7 @@ function IconCountButton({
 // happened — Tea Combos appeared as the first item, ahead of Blue Tea.
 const NAV_ORDER = ["blue-tea", "spices", "red-tea", "combos", "tea-combos", "classic-teas"];
 
-export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: HeaderClientProps) {
+export function HeaderClient({ columns, announcement, logo }: HeaderClientProps) {
   const pathname = usePathname();
   // Flat list for the always-visible desktop nav, sorted to NAV_ORDER — see the comment at its
   // call site for why this flattens `columns` rather than fetching a second shape from the DB.
@@ -230,7 +230,7 @@ export function HeaderClient({ columns, freeShippingThresholdPaise, logo }: Head
            * looking for a better code. Both coupons still exist and still work; only the top-strip
            * advertisement of the weaker one is gone, leaving the strip to carry the shipping
            * threshold, which is the claim that applies to everyone. */}
-          <span>Free shipping over {formatINR(freeShippingThresholdPaise)}</span>
+          <span>{announcement}</span>
           <button
             type="button"
             onClick={dismissAnnouncement}

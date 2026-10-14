@@ -81,6 +81,10 @@ export default async function middleware(request: NextRequest) {
   // render (duplicate content). One 301, no chain.
   if (canonicalPath !== pathname) return redirectTo(canonicalPath);
 
+  // The root layout needs the path to decide whether maintenance mode applies (the admin and the
+  // sign-in pages stay reachable); a layout can't read it any other way.
+  request.headers.set("x-pathname", pathname);
+
   const needsRole = pathname.startsWith("/admin");
   const needsSignIn = needsRole || pathname.startsWith("/account");
 

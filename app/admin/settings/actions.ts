@@ -16,6 +16,11 @@ import type { AdminActionResult } from "@/app/admin/orders/actions";
 const settingsFormSchema = z.object({
   freeShippingThresholdRupees: z.coerce.number().nonnegative(),
   standardShippingRupees: z.coerce.number().nonnegative(),
+  // Empty = the free-gift promotion is off (no gift line anywhere, no gift at checkout).
+  freeGiftThresholdRupees: z.coerce.number().positive("The free-gift amount must be more than ₹0").nullable(),
+  // Automatic Tea + Masala discount on the cheapest unit; 0 switches it off.
+  crossPillarBundleDiscountPercent: z.coerce.number().int("Whole percent only").min(0).max(50, "At most 50%"),
+  supportEmail: z.union([z.literal(""), z.email("Enter a valid support email")]),
   businessName: z.string().trim().min(1).max(200),
   line1: z.string().trim().min(1).max(200),
   city: z.string().trim().min(1).max(100),
@@ -23,9 +28,11 @@ const settingsFormSchema = z.object({
   pincode: z.string().trim().min(1).max(20),
   country: z.string().trim().min(1).max(100),
   phone: z.string().trim().min(1).max(30),
-  email: z.string().trim().min(1).max(200),
+  // Also the address that receives the "new order" email — must be a real address.
+  email: z.email("Enter a valid store email address").max(200),
   gstin: z.string().trim().min(1).max(30),
-  announcementBarText: z.string().trim().min(1).max(300),
+  // Empty = "Free shipping over ₹X" automatically; {free_shipping} inserts the current threshold.
+  announcementBarText: z.string().trim().max(300),
   maintenanceMode: z.boolean(),
   whatsappNumber: z
     .string()
@@ -47,6 +54,9 @@ export async function updateSettingsAction(input: z.infer<typeof settingsFormSch
   await updateAdminSettings({
     freeShippingThresholdPaise: toPaise(d.freeShippingThresholdRupees),
     standardShippingPaise: toPaise(d.standardShippingRupees),
+    freeGiftThresholdPaise: d.freeGiftThresholdRupees != null ? toPaise(d.freeGiftThresholdRupees) : null,
+    crossPillarBundleDiscountPercent: d.crossPillarBundleDiscountPercent,
+    supportEmail: d.supportEmail,
     storeAddress: {
       businessName: d.businessName,
       line1: d.line1,
@@ -71,6 +81,9 @@ export async function updateSettingsAction(input: z.infer<typeof settingsFormSch
     diff: {
       freeShippingThresholdPaise: { from: before.freeShippingThresholdPaise, to: toPaise(d.freeShippingThresholdRupees) },
       standardShippingPaise: { from: before.standardShippingPaise, to: toPaise(d.standardShippingRupees) },
+      freeGiftThresholdPaise: { from: before.freeGiftThresholdPaise, to: d.freeGiftThresholdRupees != null ? toPaise(d.freeGiftThresholdRupees) : null },
+      crossPillarBundleDiscountPercent: { from: before.crossPillarPercent, to: d.crossPillarBundleDiscountPercent },
+      supportEmail: { from: before.supportEmail, to: d.supportEmail },
       storeAddress: { from: before.storeAddress, to: { businessName: d.businessName, line1: d.line1, city: d.city, state: d.state, pincode: d.pincode, country: d.country, phone: d.phone, email: d.email } },
       gstin: { from: before.gstin, to: d.gstin },
       announcementBarText: { from: before.announcementBarText, to: d.announcementBarText },

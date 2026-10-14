@@ -15,6 +15,9 @@ export function SettingsForm({ initial }: { initial: AdminSettingsSnapshot }) {
   const [state, setState] = useState({
     freeShippingThresholdRupees: String(initial.freeShippingThresholdPaise / 100),
     standardShippingRupees: String(initial.standardShippingPaise / 100),
+    freeGiftThresholdRupees: initial.freeGiftThresholdPaise != null ? String(initial.freeGiftThresholdPaise / 100) : "",
+    crossPillarBundleDiscountPercent: String(initial.crossPillarPercent),
+    supportEmail: initial.supportEmail,
     businessName: initial.storeAddress.businessName,
     line1: initial.storeAddress.line1,
     city: initial.storeAddress.city,
@@ -39,6 +42,9 @@ export function SettingsForm({ initial }: { initial: AdminSettingsSnapshot }) {
       const result = await updateSettingsAction({
         freeShippingThresholdRupees: Number(state.freeShippingThresholdRupees),
         standardShippingRupees: Number(state.standardShippingRupees),
+        freeGiftThresholdRupees: state.freeGiftThresholdRupees.trim() === "" ? null : Number(state.freeGiftThresholdRupees),
+        crossPillarBundleDiscountPercent: Number(state.crossPillarBundleDiscountPercent),
+        supportEmail: state.supportEmail.trim(),
         businessName: state.businessName,
         line1: state.line1,
         city: state.city,
@@ -69,6 +75,19 @@ export function SettingsForm({ initial }: { initial: AdminSettingsSnapshot }) {
       </fieldset>
 
       <fieldset className="space-y-3 rounded-lg border border-line bg-surface p-5">
+        <legend className="px-1 text-sm font-semibold text-ink">Offers</legend>
+        <Field label="Free gift on orders of (₹)" hint="Shoppers choose a free gift once their order reaches this amount. Leave empty to switch the free-gift offer off everywhere.">
+          <Input type="number" min="1" step="1" value={state.freeGiftThresholdRupees} onChange={(e) => set("freeGiftThresholdRupees", e.target.value)} placeholder="Off" />
+        </Field>
+        <Field
+          label="Tea + Masala bundle discount (%)"
+          hint={`Automatic discount on the cheapest item when a cart has both a tea and a masala. 0 switches it off.${initial.crossPillarConfigured ? "" : " (Not set yet — the site is using 10% until you save a value.)"}`}
+        >
+          <Input type="number" min="0" max="50" step="1" value={state.crossPillarBundleDiscountPercent} onChange={(e) => set("crossPillarBundleDiscountPercent", e.target.value)} />
+        </Field>
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-lg border border-line bg-surface p-5">
         <legend className="px-1 text-sm font-semibold text-ink">Store address &amp; contact</legend>
         <Field label="Business name">
           <Input value={state.businessName} onChange={(e) => set("businessName", e.target.value)} />
@@ -94,7 +113,10 @@ export function SettingsForm({ initial }: { initial: AdminSettingsSnapshot }) {
           <Input value={state.phone} onChange={(e) => set("phone", e.target.value)} />
         </Field>
         <Field label="Email" hint={`Also where you'll get a "new order" email every time a customer checks out.`}>
-          <Input value={state.email} onChange={(e) => set("email", e.target.value)} />
+          <Input type="email" value={state.email} onChange={(e) => set("email", e.target.value)} />
+        </Field>
+        <Field label="Support / sales email (optional)" hint="Shown as the contact address on the corporate gifting page.">
+          <Input type="email" value={state.supportEmail} onChange={(e) => set("supportEmail", e.target.value)} />
         </Field>
         <Field label="GSTIN">
           <Input value={state.gstin} onChange={(e) => set("gstin", e.target.value)} />
@@ -106,12 +128,18 @@ export function SettingsForm({ initial }: { initial: AdminSettingsSnapshot }) {
 
       <fieldset className="space-y-3 rounded-lg border border-line bg-surface p-5">
         <legend className="px-1 text-sm font-semibold text-ink">Site banners</legend>
-        <Field label="Announcement-bar text">
-          <Textarea rows={2} value={state.announcementBarText} onChange={(e) => set("announcementBarText", e.target.value)} />
+        <Field
+          label="Announcement-bar text"
+          hint="The strip at the very top of every page. Leave empty for “Free shipping over ₹X”. Type {free_shipping} to show the current free-shipping amount."
+        >
+          <Textarea rows={2} value={state.announcementBarText} onChange={(e) => set("announcementBarText", e.target.value)} placeholder="Free shipping over {free_shipping}" />
         </Field>
-        <label className="flex items-center gap-2.5 text-sm text-ink">
-          <Checkbox checked={state.maintenanceMode} onCheckedChange={(checked) => set("maintenanceMode", checked === true)} />
-          Show the degraded/maintenance banner
+        <label className="flex items-start gap-2.5 text-sm text-ink">
+          <Checkbox checked={state.maintenanceMode} onCheckedChange={(checked) => set("maintenanceMode", checked === true)} className="mt-0.5" />
+          <span>
+            Maintenance mode — close the shop temporarily
+            <span className="block text-xs text-ink-3">Shoppers see a “back shortly” page with your contact details. You and other staff still see the full site and the admin.</span>
+          </span>
         </label>
       </fieldset>
 

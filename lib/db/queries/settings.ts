@@ -117,13 +117,22 @@ export async function getGstin(): Promise<string | null> {
   return value && value.toUpperCase() !== "TODO" ? value : null;
 }
 
-/** Announcement-bar copy (Phase 7's admin settings). Falls back to a plain, honest default that
- * states only real, always-true facts (the WELCOME5 coupon CLAUDE.md §7.4 guarantees exists) —
- * never an invented claim — if the settings row is somehow missing. */
+/** Announcement-bar copy as staff wrote it in Settings — "" when unset, in which case the header shows
+ * "Free shipping over ₹X" from the live threshold. `{free_shipping}` in the text is replaced with the
+ * current threshold, so the bar never quotes a stale amount. Stored as `{ text }` (see
+ * getWhatsAppNumber for why bare strings are risky); a legacy bare string is still read. */
 export async function getAnnouncementBarText(): Promise<string> {
   const [row] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "announcement_bar_text")).limit(1);
-  if (row == null || typeof row.value !== "string") return "Free shipping over ₹500 · Use code WELCOME5 for 5% off your first order";
-  return row.value;
+  const value = row?.value;
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && typeof (value as { text?: unknown }).text === "string") return (value as { text: string }).text;
+  return "";
+}
+
+/** The explicitly configured bundle percent, or null when the store still runs on the fallback. */
+export async function getConfiguredCrossPillarPercent(): Promise<number | null> {
+  const [row] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "cross_pillar_bundle_discount_percent")).limit(1);
+  return row != null && typeof row.value === "number" ? row.value : null;
 }
 
 /** The floating WhatsApp "click to chat" button's target number (components/marketing/
@@ -341,6 +350,12 @@ export async function getCategoryCircleImages(): Promise<Record<string, SectionI
 export interface AdminSettingsSnapshot {
   freeShippingThresholdPaise: Paise;
   standardShippingPaise: Paise;
+  /** null = the free-gift promotion is off. */
+  freeGiftThresholdPaise: Paise | null;
+  /** The percent pricing actually applies (configured, or the fallback). */
+  crossPillarPercent: number;
+  crossPillarConfigured: boolean;
+  supportEmail: string;
   storeAddress: StoreAddress;
   gstin: string;
   announcementBarText: string;
@@ -360,10 +375,13 @@ const EMPTY_STORE_ADDRESS: StoreAddress = {
 };
 
 export async function getAdminSettingsSnapshot(): Promise<AdminSettingsSnapshot> {
-  const [freeShippingThresholdPaise, standardShippingPaise, storeAddress, gstin, announcementBarText, maintenanceMode, whatsappNumber] =
+  const [freeShippingThresholdPaise, standardShippingPaise, freeGiftThresholdPaise, crossPillarConfigured, supportEmail, storeAddress, gstin, announcementBarText, maintenanceMode, whatsappNumber] =
     await Promise.all([
       getFreeShippingThresholdPaise(),
       getStandardShippingPaise(),
+      getFreeGiftThresholdPaise(),
+      getConfiguredCrossPillarPercent(),
+      getSupportEmail(),
       getStoreAddress(),
       getGstin(),
       getAnnouncementBarText(),
@@ -373,6 +391,10 @@ export async function getAdminSettingsSnapshot(): Promise<AdminSettingsSnapshot>
   return {
     freeShippingThresholdPaise,
     standardShippingPaise,
+    freeGiftThresholdPaise,
+    crossPillarPercent: crossPillarConfigured ?? FALLBACK_CROSS_PILLAR_BUNDLE_DISCOUNT_PERCENT,
+    crossPillarConfigured: crossPillarConfigured != null,
+    supportEmail,
     storeAddress: storeAddress ?? EMPTY_STORE_ADDRESS,
     gstin: gstin ?? "TODO",
     announcementBarText,

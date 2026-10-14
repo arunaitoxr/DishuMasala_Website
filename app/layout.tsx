@@ -15,8 +15,10 @@ import { PhoneCapturePopup } from "@/components/marketing/PhoneCapturePopup";
 import { WhatsAppButton } from "@/components/marketing/WhatsAppButton";
 import { WhatsAppMessageProvider } from "@/lib/context/WhatsAppMessageContext";
 import { MetaPixel } from "@/components/marketing/MetaPixel";
-import { getDisplaySessionUser } from "@/lib/auth/session";
-import { getSiteBranding, getStoreAddress, getWhatsAppNumber } from "@/lib/db/queries/settings";
+import { getDisplaySessionUser, requireStaffOrAdmin } from "@/lib/auth/session";
+import { headers } from "next/headers";
+import { getMaintenanceMode, getSiteBranding, getStoreAddress, getWhatsAppNumber } from "@/lib/db/queries/settings";
+import { MaintenanceNotice } from "@/components/layout/MaintenanceNotice";
 import "./globals.css";
 
 // Fraunces is a genuinely variable Google font (wght 100–900 plus an optical-size axis) — loading
@@ -57,17 +59,30 @@ export const viewport: Viewport = {
   themeColor: "#FCFAF6",
 };
 
+/** Reachable even in maintenance mode, so staff can sign in and switch it off again. */
+const MAINTENANCE_EXEMPT_PATHS = ["/admin", "/login", "/auth", "/reset-password", "/verify-email"];
+
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Resolved server-side so the header, the wishlist toggle and the cart/wishlist merge all see
   // the same session without any Supabase client running in the browser. Deliberately the cheap
   // claims-only read — it runs on every render, including every revalidatePath a server action
   // triggers — and carries no role, because this is display state, never authorization.
-  const [sessionUser, whatsappNumber, storeAddress, branding] = await Promise.all([
+  const [sessionUser, whatsappNumber, storeAddress, branding, maintenanceMode, requestHeaders] = await Promise.all([
     getDisplaySessionUser(),
     getWhatsAppNumber(),
     getStoreAddress(),
     getSiteBranding(),
+    getMaintenanceMode(),
+    headers(),
   ]);
+
+  // Admin → Settings → Maintenance mode: shoppers get the "back shortly" page; staff keep the full
+  // site (with a reminder strip), and the admin / sign-in pages always stay reachable. The path comes
+  // from middleware.ts (x-pathname); the role check only runs while maintenance is on.
+  const pathname = requestHeaders.get("x-pathname") ?? "/";
+  const exempt = MAINTENANCE_EXEMPT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const staffViewer = maintenanceMode ? (await requireStaffOrAdmin()).ok : false;
+  const shopClosed = maintenanceMode && !staffViewer && !exempt;
 
   // Site-wide Organization schema (CLAUDE.md §10) — built only from real settings rows, never an
   // invented address, phone or logo. `sameAs` is omitted entirely: Footer.tsx's own comment
@@ -116,11 +131,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <PhoneCapturePopup />
               <WhatsAppButton number={whatsappNumber} />
               <AccountSync />
-              <Header />
-              <main id="main-content" className="flex-1">
-                {children}
-              </main>
-              <Footer />
+              {maintenanceMode && staffViewer && (
+                <p role="status" className="bg-warn px-4 py-1.5 text-center text-xs font-semibold text-ink">
+                  Maintenance mode is ON — shoppers see the “back shortly” page. Turn it off in Admin → Settings.
+                </p>
+              )}
+              {shopClosed ? (
+                <MaintenanceNotice branding={branding} storeAddress={storeAddress} whatsappNumber={whatsappNumber} />
+              ) : (
+                <>
+                  <Header />
+                  <main id="main-content" className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </>
+              )}
               <CartDrawer upsells={<CartUpsells />} />
               <FreeGiftOptionsServer />
               <AddDealsPopupServer />
