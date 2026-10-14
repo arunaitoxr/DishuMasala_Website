@@ -1,0 +1,1 @@
+ALTER TYPE "public"."content_status" ADD VALUE 'archived';

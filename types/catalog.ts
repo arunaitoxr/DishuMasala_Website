@@ -6,7 +6,8 @@
  */
 import type { Paise } from "@/lib/money";
 
-export type ContentStatus = "draft" | "published";
+/** Mirrors the `content_status` enum (lib/db/schema/enums.ts); `archived` is the soft delete. */
+export type ContentStatus = "draft" | "published" | "archived";
 
 export interface Collection {
   id: number;

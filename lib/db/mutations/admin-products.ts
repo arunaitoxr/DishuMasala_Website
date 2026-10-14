@@ -6,13 +6,13 @@ import "server-only";
  * `writeAuditLog`, and `revalidateTag`/`revalidatePath` — this file is the DB-transaction layer,
  * same split as lib/db/mutations/admin-orders.ts.
  */
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../index";
-import { productImages, products, variants } from "../schema";
+import { orderItems, productImages, products, variants } from "../schema";
 import { createHash, randomUUID } from "node:crypto";
-import { buildKey, deleteObject, getObject, putObject, presignUpload } from "@/lib/storage/storage";
+import { buildKey, deleteObject, getObject, listImageFamily, putObject, presignUpload } from "@/lib/storage/storage";
 import { processImage } from "@/lib/storage/images";
-import { isSlugTaken, countProductImageReferencesToKey } from "../queries/admin-products";
+import { isSlugTaken } from "../queries/admin-products";
 
 export interface VariantInput {
   id?: number;
@@ -116,6 +116,15 @@ export async function updateProductDb(id: number, input: ProductInput): Promise<
       await tx.delete(variants).where(inArray(variants.id, toDelete));
     }
 
+    // Park every kept variant on a unique placeholder SKU first, so the final writes below can swap
+    // SKUs between variants (or reuse a deleted variant's SKU) without tripping `variants_sku_uniq`
+    // partway through — a failed unique check used to take down the whole editor.
+    for (const v of input.variants) {
+      if (v.id != null && existingIds.has(v.id)) {
+        await tx.update(variants).set({ sku: `__saving__${v.id}` }).where(eq(variants.id, v.id));
+      }
+    }
+
     for (const [i, v] of input.variants.entries()) {
       const values = {
         sku: v.sku,
@@ -191,39 +200,70 @@ export async function presignProductImageUploadDb(
   return { url, tmpKey };
 }
 
-/** Step 2: after the browser confirms the presigned PUT succeeded, the server fetches the object
- * back, runs the real `sharp` AVIF/WebP derivative pipeline (same as scripts/migrate-images.ts),
- * uploads every derivative, records the largest WebP as the canonical `storageKey` (next/image handles
- * further format/width negotiation from there — see scripts/migrate-images.ts's identical
- * comment), inserts the `product_images` row (alt text starts empty and MUST be filled in before
- * publish — see publishProductDb), and deletes the temp original. */
-export async function finalizeProductImageUploadDb(
-  productId: number,
-  productSlug: string,
-  tmpKey: string,
-): Promise<{ id: number; storageKey: string; width: number; height: number }> {
+/** A temp key this product's own presign step could have produced — never an arbitrary object in
+ * the bucket (finalize fetches the key and then deletes it, so trusting a client-supplied key would
+ * let a staff session delete any live file). */
+function assertOwnTmpKey(productSlug: string, tmpKey: string): void {
+  const prefix = `products/${productSlug}/tmp-`;
+  if (!tmpKey.startsWith(prefix) || tmpKey.includes("..") || !/^[a-z0-9/._-]+$/i.test(tmpKey)) {
+    throw new Error("That upload doesn't belong to this product — please upload the file again.");
+  }
+}
+
+/** Runs the sharp AVIF/WebP pipeline on an uploaded original and stores every derivative; returns
+ * the canonical (largest WebP) key the database records. Deletes the temp original. */
+async function processUpload(productSlug: string, tmpKey: string): Promise<{ storageKey: string; width: number; height: number }> {
+  assertOwnTmpKey(productSlug, tmpKey);
   const originalBuffer = await getObject(tmpKey);
   const processed = await processImage(originalBuffer);
 
   const hash = createHash("sha256").update(originalBuffer).digest("hex").slice(0, 16);
-  let canonicalKey = "";
-  let canonicalWidth = 0;
-  let canonicalHeight = 0;
-
+  let storageKey = "";
+  let width = 0;
+  let height = 0;
   for (const derivative of processed.derivatives) {
     const key = buildKey("products", productSlug, hash, derivative.format, `w${derivative.width}`);
     await putObject(key, derivative.buffer, `image/${derivative.format}`);
-    if (derivative.format === "webp" && derivative.width >= canonicalWidth) {
-      canonicalKey = key;
-      canonicalWidth = derivative.width;
-      canonicalHeight = derivative.height;
+    if (derivative.format === "webp" && derivative.width >= width) {
+      storageKey = key;
+      width = derivative.width;
+      height = derivative.height;
     }
   }
 
   await deleteObject(tmpKey).catch(() => {
-    // Best-effort cleanup of the temp original — a leftover temp object is not a correctness bug
-    // (it's never referenced by any DB row), just a small amount of storage waste.
+    // Best-effort cleanup of the temp original — never referenced by any row, just storage waste.
   });
+  return { storageKey, width, height };
+}
+
+/**
+ * Deletes an image's files (every derivative) once nothing still needs them: no other image row
+ * points at the same key, and no past order shows it. `order_items.image_storage_key` snapshots the
+ * product's primary image at checkout, so removing those files would break old orders' thumbnails.
+ */
+async function deleteImageFilesIfUnused(storageKey: string): Promise<void> {
+  const [imageRefs] = await db.select({ n: sql<number>`count(*)` }).from(productImages).where(eq(productImages.storageKey, storageKey));
+  const [orderRefs] = await db.select({ n: sql<number>`count(*)` }).from(orderItems).where(eq(orderItems.imageStorageKey, storageKey));
+  if (Number(imageRefs?.n ?? 0) > 0 || Number(orderRefs?.n ?? 0) > 0) return;
+  const family = await listImageFamily(storageKey).catch(() => [storageKey]);
+  for (const key of family) {
+    await deleteObject(key).catch(() => {
+      // The row is already gone — a file that fails to delete is storage waste, not a broken page.
+    });
+  }
+}
+
+/** Step 2: after the browser's presigned PUT succeeds, the server fetches the original back, builds
+ * the derivatives and inserts the `product_images` row (alt text starts empty and MUST be filled in
+ * before publish — see publishProductDb). The slug comes from the saved product, not the form. */
+export async function finalizeProductImageUploadDb(
+  productId: number,
+  tmpKey: string,
+): Promise<{ id: number; storageKey: string; width: number; height: number; productSlug: string }> {
+  const [product] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, productId)).limit(1);
+  if (!product) throw new Error("Product not found.");
+  const { storageKey, width, height } = await processUpload(product.slug, tmpKey);
 
   const existingImages = await db
     .select({ position: productImages.position })
@@ -235,69 +275,132 @@ export async function finalizeProductImageUploadDb(
 
   const [row] = await db
     .insert(productImages)
-    .values({
-      productId,
-      storageKey: canonicalKey,
-      alt: "",
-      width: canonicalWidth,
-      height: canonicalHeight,
-      position: nextPosition,
-      isPrimary: isFirstImage,
-    })
+    .values({ productId, storageKey, alt: "", width, height, position: nextPosition, isPrimary: isFirstImage })
     .returning({ id: productImages.id, storageKey: productImages.storageKey, width: productImages.width, height: productImages.height });
 
-  return row;
+  return { ...row, productSlug: product.slug };
 }
 
-export async function updateProductImageAltDb(imageId: number, alt: string): Promise<void> {
-  await db.update(productImages).set({ alt }).where(eq(productImages.id, imageId));
+/** Swaps the file behind an existing image, keeping its alt text, position and primary flag; the old
+ * files are removed if nothing else needs them. */
+export async function replaceProductImageDb(
+  productId: number,
+  imageId: number,
+  tmpKey: string,
+): Promise<{ storageKey: string; productSlug: string }> {
+  const [image] = await db
+    .select({ id: productImages.id, storageKey: productImages.storageKey, slug: products.slug })
+    .from(productImages)
+    .innerJoin(products, eq(products.id, productImages.productId))
+    .where(and(eq(productImages.id, imageId), eq(productImages.productId, productId)))
+    .limit(1);
+  if (!image) throw new Error("Image not found on this product.");
+
+  const { storageKey, width, height } = await processUpload(image.slug, tmpKey);
+  await db.update(productImages).set({ storageKey, width, height }).where(eq(productImages.id, imageId));
+  if (image.storageKey !== storageKey) await deleteImageFilesIfUnused(image.storageKey);
+  return { storageKey, productSlug: image.slug };
 }
 
-export async function reorderProductImagesDb(productId: number, orderedIds: number[]): Promise<void> {
+/** Saves alt text; returns the owning product's slug so the caller can refresh its storefront page. */
+export async function updateProductImageAltDb(imageId: number, alt: string): Promise<{ productSlug: string } | null> {
+  const [row] = await db
+    .update(productImages)
+    .set({ alt })
+    .where(eq(productImages.id, imageId))
+    .returning({ productId: productImages.productId });
+  if (!row) return null;
+  const [product] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, row.productId)).limit(1);
+  return product ? { productSlug: product.slug } : null;
+}
+
+/** Re-orders a product's images. Every id must belong to that product (and all of them must be
+ * listed), so a stale or tampered list can't move another product's images. */
+export async function reorderProductImagesDb(productId: number, orderedIds: number[]): Promise<{ ok: true } | { ok: false; error: string }> {
+  const own = await db.select({ id: productImages.id }).from(productImages).where(eq(productImages.productId, productId));
+  const ownIds = new Set(own.map((r) => r.id));
+  if (orderedIds.length !== ownIds.size || orderedIds.some((id) => !ownIds.has(id))) {
+    return { ok: false, error: "The image list is out of date — reload the page and try again." };
+  }
   await db.transaction(async (tx) => {
     for (const [i, imgId] of orderedIds.entries()) {
-      await tx.update(productImages).set({ position: i }).where(eq(productImages.id, imgId));
+      await tx.update(productImages).set({ position: i }).where(and(eq(productImages.id, imgId), eq(productImages.productId, productId)));
     }
   });
+  return { ok: true };
 }
 
-export async function setPrimaryProductImageDb(productId: number, imageId: number): Promise<void> {
+export async function setPrimaryProductImageDb(productId: number, imageId: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [image] = await db
+    .select({ id: productImages.id })
+    .from(productImages)
+    .where(and(eq(productImages.id, imageId), eq(productImages.productId, productId)))
+    .limit(1);
+  if (!image) return { ok: false, error: "Image not found on this product." };
   await db.transaction(async (tx) => {
-    await tx.update(productImages).set({ isPrimary: false }).where(eq(productImages.productId, productId));
+    await tx.update(productImages).set({ isPrimary: false }).where(and(eq(productImages.productId, productId), ne(productImages.id, imageId)));
     await tx.update(productImages).set({ isPrimary: true }).where(eq(productImages.id, imageId));
   });
+  return { ok: true };
 }
 
-export type DeleteImageResult = { ok: true } | { ok: false; error: string };
+export type DeleteImageResult = { ok: true; productSlug: string } | { ok: false; error: string };
 
-/** Deletes a product image row AND its storage object — but only actually removes the storage object when
- * no other image row still references the same key (PROMPTS.md's explicit "delete with a real
- * check that nothing else still references that storage key before removing it"). */
-export async function deleteProductImageDb(imageId: number): Promise<DeleteImageResult> {
-  const [image] = await db.select().from(productImages).where(eq(productImages.id, imageId)).limit(1);
-  if (!image) return { ok: false, error: "Image not found." };
+/** Deletes an image row and, when nothing else needs them, all of its files. If it was the primary
+ * image, the next one in order takes over. */
+export async function deleteProductImageDb(productId: number, imageId: number): Promise<DeleteImageResult> {
+  const [image] = await db
+    .select({ id: productImages.id, storageKey: productImages.storageKey, isPrimary: productImages.isPrimary, slug: products.slug })
+    .from(productImages)
+    .innerJoin(products, eq(products.id, productImages.productId))
+    .where(and(eq(productImages.id, imageId), eq(productImages.productId, productId)))
+    .limit(1);
+  if (!image) return { ok: false, error: "Image not found on this product." };
 
   await db.delete(productImages).where(eq(productImages.id, imageId));
+  await deleteImageFilesIfUnused(image.storageKey);
 
-  const stillReferenced = await countProductImageReferencesToKey(image.storageKey, imageId);
-  if (stillReferenced === 0) {
-    await deleteObject(image.storageKey).catch(() => {
-      // Row is already gone either way — a failed storage delete leaves an orphaned object, not a
-      // dangling reference, so it's safe to swallow here rather than fail the whole action.
-    });
-  }
-
-  // If the deleted image was primary, promote the next-lowest-position image, if any.
   if (image.isPrimary) {
     const [next] = await db
       .select({ id: productImages.id })
       .from(productImages)
-      .where(eq(productImages.productId, image.productId))
+      .where(eq(productImages.productId, productId))
       .orderBy(asc(productImages.position))
       .limit(1);
     if (next) await db.update(productImages).set({ isPrimary: true }).where(eq(productImages.id, next.id));
   }
+  return { ok: true, productSlug: image.slug };
+}
 
+// -----------------------------------------------------------------------------------------------
+// Delete: archive (soft), restore, delete permanently
+// -----------------------------------------------------------------------------------------------
+
+/** Soft delete (CLAUDE.md §9): `archived` products vanish from the storefront — every storefront read
+ * filters `status = 'published'` — but stay restorable. */
+export async function archiveProductDb(id: number): Promise<void> {
+  await db.update(products).set({ status: "archived", updatedAt: new Date() }).where(eq(products.id, id));
+}
+
+/** Brings an archived product back as a draft, to be checked and published again. */
+export async function restoreProductDb(id: number): Promise<void> {
+  await db.update(products).set({ status: "draft", updatedAt: new Date() }).where(eq(products.id, id));
+}
+
+/**
+ * Removes an archived product for good: its variants, images, reviews and wishlist entries go with
+ * it (foreign keys cascade). Past orders are untouched — `order_items` keeps its own snapshot of name,
+ * SKU, price and image, and only loses the link to the variant (set null) — and image files that an
+ * old order still shows are kept.
+ */
+export async function deleteProductPermanentlyDb(id: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [product] = await db.select({ status: products.status }).from(products).where(eq(products.id, id)).limit(1);
+  if (!product) return { ok: false, error: "Product not found." };
+  if (product.status !== "archived") return { ok: false, error: "Archive the product first, then delete it permanently." };
+
+  const images = await db.select({ storageKey: productImages.storageKey }).from(productImages).where(eq(productImages.productId, id));
+  await db.delete(products).where(eq(products.id, id));
+  for (const img of images) await deleteImageFilesIfUnused(img.storageKey);
   return { ok: true };
 }
 

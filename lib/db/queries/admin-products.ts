@@ -5,9 +5,10 @@ import "server-only";
  * storefront product queries: the admin always needs the freshest row (it's the thing being
  * edited), and every admin page/action re-checks staff auth independently anyway.
  */
-import { and, asc, desc, eq, ilike, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../index";
-import { collections, productImages, products, variants } from "../schema";
+import type { ContentStatus } from "../schema/enums";
+import { collections, orderItems, productImages, products, variants } from "../schema";
 import { publicUrl } from "@/lib/storage/storage";
 
 export interface AdminProductListRow {
@@ -15,7 +16,7 @@ export interface AdminProductListRow {
   slug: string;
   name: string;
   collectionTitle: string;
-  status: "draft" | "published";
+  status: ContentStatus;
   priority: number;
   variantCount: number;
   minPricePaise: number | null;
@@ -29,7 +30,7 @@ export interface AdminProductListParams {
   sort: "name" | "priority" | "status" | "collection";
   dir: "asc" | "desc";
   search?: string;
-  status?: "draft" | "published";
+  status?: ContentStatus;
   collectionId?: number;
 }
 
@@ -45,7 +46,8 @@ export async function listAdminProducts(
 ): Promise<{ rows: AdminProductListRow[]; total: number }> {
   const conditions = [];
   if (params.search?.trim()) conditions.push(ilike(products.name, `%${params.search.trim()}%`));
-  if (params.status) conditions.push(eq(products.status, params.status));
+  // Archived = deleted: only listed when asked for, never mixed into the working list.
+  conditions.push(params.status ? eq(products.status, params.status) : ne(products.status, "archived"));
   if (params.collectionId) conditions.push(eq(products.collectionId, params.collectionId));
   const where = conditions.length ? and(...conditions) : undefined;
 
@@ -117,7 +119,7 @@ export interface AdminProductDetail {
   tags: string[];
   optionLabel: string;
   priority: number;
-  status: "draft" | "published";
+  status: ContentStatus;
   seoTitle: string | null;
   seoDescription: string | null;
   variants: AdminVariantRow[];
@@ -161,7 +163,7 @@ export async function isSlugTaken(slug: string, excludeId?: number): Promise<boo
   return !!row;
 }
 
-export async function getProductSlugAndStatus(id: number): Promise<{ slug: string; status: "draft" | "published" } | null> {
+export async function getProductSlugAndStatus(id: number): Promise<{ slug: string; status: ContentStatus } | null> {
   const [row] = await db.select({ slug: products.slug, status: products.status }).from(products).where(eq(products.id, id)).limit(1);
   return row ?? null;
 }
@@ -180,4 +182,23 @@ export async function countProductImageReferencesToKey(storageKey: string, exclu
 
 export async function listCollectionsForPicker(): Promise<{ id: number; title: string }[]> {
   return db.select({ id: collections.id, title: collections.title }).from(collections).orderBy(asc(collections.priority));
+}
+
+/** SKUs from `skus` already used by a variant of some OTHER product (SKUs are unique store-wide). */
+export async function findSkusUsedElsewhere(skus: string[], excludeProductId?: number): Promise<string[]> {
+  if (skus.length === 0) return [];
+  const conditions = [inArray(variants.sku, skus)];
+  if (excludeProductId != null) conditions.push(ne(variants.productId, excludeProductId));
+  const rows = await db.select({ sku: variants.sku }).from(variants).where(and(...conditions));
+  return rows.map((r) => r.sku);
+}
+
+/** How many past order lines point at this product's variants — shown before a permanent delete. */
+export async function countOrderLinesForProduct(productId: number): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(orderItems)
+    .innerJoin(variants, eq(variants.id, orderItems.variantId))
+    .where(eq(variants.productId, productId));
+  return Number(row?.n ?? 0);
 }

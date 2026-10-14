@@ -120,6 +120,13 @@
       "when": 1791904423707,
       "tag": "0016_coupon_used_count_paid_only",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791953678273,
+      "tag": "0017_content_status_archived",
+      "breakpoints": true
     }
   ]
 }

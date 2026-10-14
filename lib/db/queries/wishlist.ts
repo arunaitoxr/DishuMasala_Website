@@ -28,7 +28,8 @@ export async function getWishlistCards(userId: number): Promise<WishlistCard[]> 
   const productIds = await getWishlistProductIds(userId);
   if (productIds.length === 0) return [];
 
-  const productRows = await db.select().from(products).where(inArray(products.id, productIds));
+  // A saved product that has since been unpublished or deleted drops out rather than linking to a 404.
+  const productRows = await db.select().from(products).where(and(inArray(products.id, productIds), eq(products.status, "published")));
   const variantRows = await db.select().from(variants).where(and(inArray(variants.productId, productIds), notGiftOnly));
   const imageRows = await db
     .select()

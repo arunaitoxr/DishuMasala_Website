@@ -22,13 +22,17 @@ import {
   unpublishProductDb,
   presignProductImageUploadDb,
   finalizeProductImageUploadDb,
+  replaceProductImageDb,
   updateProductImageAltDb,
   reorderProductImagesDb,
   setPrimaryProductImageDb,
   deleteProductImageDb,
+  archiveProductDb,
+  restoreProductDb,
+  deleteProductPermanentlyDb,
   type ProductInput,
 } from "@/lib/db/mutations/admin-products";
-import { isSlugTaken, getProductSlugAndStatus, getAdminProductById } from "@/lib/db/queries/admin-products";
+import { isSlugTaken, getProductSlugAndStatus, getAdminProductById, findSkusUsedElsewhere } from "@/lib/db/queries/admin-products";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
 
@@ -75,8 +79,25 @@ const productSchema = z.object({
   priority: z.coerce.number().int().min(1).max(99),
   seoTitle: z.string().trim().max(70).nullable(),
   seoDescription: z.string().trim().max(200).nullable(),
-  variants: z.array(variantSchema).min(1, "Add at least one variant"),
+  variants: z
+    .array(variantSchema)
+    .min(1, "Add at least one variant")
+    .refine((vs) => new Set(vs.map((v) => v.sku.toUpperCase())).size === vs.length, "Two variants have the same SKU — every SKU must be different")
+    .refine((vs) => vs.every((v) => v.priceRupees <= v.mrpRupees), "A variant's price can't be higher than its MRP"),
 });
+
+/** SKUs are unique across the whole store; say which one clashes instead of letting the database's
+ * unique index throw mid-save. */
+async function skuConflictError(variantsIn: { sku: string }[], productId?: number): Promise<string | null> {
+  const taken = await findSkusUsedElsewhere(variantsIn.map((v) => v.sku), productId);
+  return taken.length > 0 ? `SKU ${taken.join(", ")} is already used by another product.` : null;
+}
+
+/** Postgres unique-violation (23505) — the last line of defence if two saves race. */
+function isUniqueViolation(e: unknown): boolean {
+  const err = e as { code?: string; cause?: { code?: string } } | null;
+  return err?.code === "23505" || err?.cause?.code === "23505";
+}
 
 function toDbInput(parsed: z.infer<typeof productSchema>): ProductInput {
   return {
@@ -124,8 +145,17 @@ export async function createProductAction(input: z.infer<typeof productSchema>):
     return { ok: false, error: `The slug "${parsed.data.slug}" is already used by another product.` };
   }
 
+  const skuError = await skuConflictError(parsed.data.variants);
+  if (skuError) return { ok: false, error: skuError };
+
   const dbInput = toDbInput(parsed.data);
-  const id = await createProductDb(dbInput);
+  let id: number;
+  try {
+    id = await createProductDb(dbInput);
+  } catch (e) {
+    if (isUniqueViolation(e)) return { ok: false, error: "That slug or a SKU was just taken by another product — check them and save again." };
+    throw e;
+  }
 
   await writeAuditLog({
     actorUserId: auth.user.id,
@@ -152,8 +182,16 @@ export async function updateProductAction(id: number, input: z.infer<typeof prod
     return { ok: false, error: `The slug "${parsed.data.slug}" is already used by another product.` };
   }
 
+  const skuError = await skuConflictError(parsed.data.variants, id);
+  if (skuError) return { ok: false, error: skuError };
+
   const dbInput = toDbInput(parsed.data);
-  await updateProductDb(id, dbInput);
+  try {
+    await updateProductDb(id, dbInput);
+  } catch (e) {
+    if (isUniqueViolation(e)) return { ok: false, error: "That slug or a SKU was just taken by another product — check them and save again." };
+    throw e;
+  }
 
   await writeAuditLog({
     actorUserId: auth.user.id,
@@ -240,7 +278,6 @@ export async function presignProductImageUploadAction(
 
 const finalizeSchema = z.object({
   productId: z.number().int().positive(),
-  productSlug: z.string().trim().min(1),
   tmpKey: z.string().trim().min(1),
 });
 
@@ -254,7 +291,7 @@ export async function finalizeProductImageUploadAction(
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   try {
-    const row = await finalizeProductImageUploadDb(parsed.data.productId, parsed.data.productSlug, parsed.data.tmpKey);
+    const row = await finalizeProductImageUploadDb(parsed.data.productId, parsed.data.tmpKey);
     const { publicUrl } = await import("@/lib/storage/storage");
     await writeAuditLog({
       actorUserId: auth.user.id,
@@ -264,6 +301,7 @@ export async function finalizeProductImageUploadAction(
       diff: { storageKey: row.storageKey, width: row.width, height: row.height },
     });
     revalidatePath(`/admin/products/${parsed.data.productId}`);
+    revalidateCatalog(row.productSlug); // a published product shows the new image straight away
     return { ok: true, message: "Image uploaded — add alt text before publishing.", data: { id: row.id, url: publicUrl(row.storageKey) } };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Upload processing failed." };
@@ -278,7 +316,8 @@ export async function updateProductImageAltAction(input: z.infer<typeof altSchem
   const parsed = altSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
-  await updateProductImageAltDb(parsed.data.imageId, parsed.data.alt);
+  const saved = await updateProductImageAltDb(parsed.data.imageId, parsed.data.alt);
+  if (!saved) return { ok: false, error: "Image not found." };
   await writeAuditLog({
     actorUserId: auth.user.id,
     action: "product.image_alt_update",
@@ -286,6 +325,7 @@ export async function updateProductImageAltAction(input: z.infer<typeof altSchem
     entityId: parsed.data.imageId,
     diff: { alt: parsed.data.alt },
   });
+  revalidateCatalog(saved.productSlug); // the storefront's cached product page carries the alt text
   return { ok: true, message: "Alt text saved." };
 }
 
@@ -297,7 +337,8 @@ export async function reorderProductImagesAction(input: z.infer<typeof reorderSc
   const parsed = reorderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
-  await reorderProductImagesDb(parsed.data.productId, parsed.data.orderedIds);
+  const reordered = await reorderProductImagesDb(parsed.data.productId, parsed.data.orderedIds);
+  if (!reordered.ok) return reordered;
   await writeAuditLog({
     actorUserId: auth.user.id,
     action: "product.image_reorder",
@@ -318,7 +359,8 @@ export async function setPrimaryProductImageAction(input: z.infer<typeof primary
   const parsed = primarySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
-  await setPrimaryProductImageDb(parsed.data.productId, parsed.data.imageId);
+  const primary = await setPrimaryProductImageDb(parsed.data.productId, parsed.data.imageId);
+  if (!primary.ok) return primary;
   await writeAuditLog({
     actorUserId: auth.user.id,
     action: "product.image_set_primary",
@@ -339,7 +381,7 @@ export async function deleteProductImageAction(input: z.infer<typeof deleteImage
   const parsed = deleteImageSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
-  const result = await deleteProductImageDb(parsed.data.imageId);
+  const result = await deleteProductImageDb(parsed.data.productId, parsed.data.imageId);
   if (!result.ok) return { ok: false, error: result.error };
 
   await writeAuditLog({
@@ -349,7 +391,101 @@ export async function deleteProductImageAction(input: z.infer<typeof deleteImage
     entityId: parsed.data.imageId,
     diff: { productId: parsed.data.productId },
   });
-  const product = await getAdminProductById(parsed.data.productId);
-  if (product) revalidateCatalog(product.slug);
+  revalidateCatalog(result.productSlug);
   return { ok: true, message: "Image deleted." };
+}
+
+const replaceSchema = z.object({
+  productId: z.number().int().positive(),
+  imageId: z.number().int().positive(),
+  tmpKey: z.string().trim().min(1),
+});
+
+/** Uploads a new file in place of an existing image — alt text, position and primary flag stay. */
+export async function replaceProductImageAction(input: z.infer<typeof replaceSchema>): Promise<AdminResult<{ url: string }>> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const parsed = replaceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+
+  try {
+    const result = await replaceProductImageDb(parsed.data.productId, parsed.data.imageId, parsed.data.tmpKey);
+    const { publicUrl } = await import("@/lib/storage/storage");
+    await writeAuditLog({
+      actorUserId: auth.user.id,
+      action: "product.image_replace",
+      entity: "product_image",
+      entityId: parsed.data.imageId,
+      diff: { productId: parsed.data.productId, storageKey: result.storageKey },
+    });
+    revalidatePath(`/admin/products/${parsed.data.productId}`);
+    revalidateCatalog(result.productSlug);
+    return { ok: true, message: "Image replaced.", data: { url: publicUrl(result.storageKey) } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't replace the image." };
+  }
+}
+
+// -------------------------------------------------------------------------------------------
+// Delete: archive (soft), restore, delete permanently
+// -------------------------------------------------------------------------------------------
+
+/** "Delete" in the admin: archives the product — gone from the storefront, restorable. Typed
+ * confirmation of the slug, like every destructive admin action (CLAUDE.md §9). */
+export async function archiveProductAction(id: number, confirmSlug: string): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const product = await getProductSlugAndStatus(id);
+  if (!product) return { ok: false, error: "Product not found." };
+  if (confirmSlug.trim() !== product.slug) return { ok: false, error: `Type ${product.slug} exactly to confirm.` };
+
+  await archiveProductDb(id);
+  await writeAuditLog({
+    actorUserId: auth.user.id,
+    action: "product.archive",
+    entity: "product",
+    entityId: id,
+    diff: { slug: product.slug, status: { from: product.status, to: "archived" } },
+  });
+  revalidateCatalog(product.slug);
+  return { ok: true, message: "Product deleted — it's off the site. You can restore it from Archived." };
+}
+
+export async function restoreProductAction(id: number): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const product = await getProductSlugAndStatus(id);
+  if (!product) return { ok: false, error: "Product not found." };
+  if (product.status !== "archived") return { ok: false, error: "Only an archived product can be restored." };
+
+  await restoreProductDb(id);
+  await writeAuditLog({
+    actorUserId: auth.user.id,
+    action: "product.restore",
+    entity: "product",
+    entityId: id,
+    diff: { slug: product.slug, status: { from: "archived", to: "draft" } },
+  });
+  revalidateCatalog(product.slug);
+  return { ok: true, message: "Product restored as a draft — publish it when it's ready." };
+}
+
+export async function deleteProductPermanentlyAction(id: number, confirmSlug: string): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const product = await getProductSlugAndStatus(id);
+  if (!product) return { ok: false, error: "Product not found." };
+  if (confirmSlug.trim() !== product.slug) return { ok: false, error: `Type ${product.slug} exactly to confirm.` };
+
+  const result = await deleteProductPermanentlyDb(id);
+  if (!result.ok) return result;
+  await writeAuditLog({
+    actorUserId: auth.user.id,
+    action: "product.delete",
+    entity: "product",
+    entityId: id,
+    diff: { slug: product.slug },
+  });
+  revalidateCatalog(product.slug);
+  return { ok: true, message: "Product deleted permanently." };
 }

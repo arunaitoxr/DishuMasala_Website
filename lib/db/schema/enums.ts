@@ -5,7 +5,9 @@ import { pgEnum } from "drizzle-orm/pg-core";
 export const userRoleEnum = pgEnum("user_role", ["customer", "staff", "admin"]);
 
 // Shared by products, posts and pages — all three have the identical draft/published lifecycle.
-export const contentStatusEnum = pgEnum("content_status", ["draft", "published"]);
+/** `archived` is the soft delete for products, posts and pages (CLAUDE.md §9 prefers soft-delete):
+ * hidden everywhere the storefront reads `published`, kept for restoring or deleting for good. */
+export const contentStatusEnum = pgEnum("content_status", ["draft", "published", "archived"]);
 
 export const couponKindEnum = pgEnum("coupon_kind", ["percent", "fixed"]);
 
@@ -26,3 +28,5 @@ export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "f
 export const reviewStatusEnum = pgEnum("review_status", ["pending", "approved", "rejected"]);
 
 export const postKindEnum = pgEnum("post_kind", ["blog", "recipe"]);
+
+export type ContentStatus = (typeof contentStatusEnum.enumValues)[number];

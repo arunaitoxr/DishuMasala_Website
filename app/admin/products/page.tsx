@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatINR, paise } from "@/lib/money";
 import { listAdminProducts, listCollectionsForPicker, type AdminProductListRow } from "@/lib/db/queries/admin-products";
+import { RowActions } from "@/components/admin/RowActions";
+import { archiveProductAction, deleteProductPermanentlyAction } from "./actions";
 
 export const metadata = { title: "Products" };
 
@@ -28,7 +30,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   const sort = (first(sp.sort) as "name" | "priority" | "status" | "collection") || "priority";
   const dir = first(sp.dir) === "desc" ? "desc" : "asc";
   const search = first(sp.q);
-  const status = first(sp.status) as "draft" | "published" | undefined;
+  const statusParam = first(sp.status);
+  const status = statusParam === "draft" || statusParam === "published" || statusParam === "archived" ? statusParam : undefined;
   const collectionId = first(sp.collection) ? Number(first(sp.collection)) : undefined;
 
   const [{ rows, total }, collections] = await Promise.all([
@@ -61,7 +64,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
       key: "status",
       label: "Status",
       sortKey: "status",
-      render: (r) => <Badge tone={r.status === "published" ? "ok" : "neutral"}>{r.status}</Badge>,
+      render: (r) => (
+        <Badge tone={r.status === "published" ? "ok" : r.status === "archived" ? "crit" : "neutral"}>{r.status === "archived" ? "deleted" : r.status}</Badge>
+      ),
     },
     { key: "variants", label: "Variants", align: "right", render: (r) => r.variantCount },
     { key: "images", label: "Images", align: "right", render: (r) => r.imageCount },
@@ -75,6 +80,29 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
           : r.minPricePaise === r.maxPricePaise
             ? formatINR(paise(r.minPricePaise))
             : `${formatINR(paise(r.minPricePaise))} – ${formatINR(paise(r.maxPricePaise!))}`,
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) =>
+        r.status === "archived" ? (
+          <RowActions
+            editHref={`/admin/products/${r.id}`}
+            editLabel="Open / restore"
+            deleteLabel="Delete permanently"
+            confirmText={r.slug}
+            deleteDescription={`Removes ${r.name}, its variants, images and reviews for good. Past orders keep their own copy.`}
+            onDelete={deleteProductPermanentlyAction.bind(null, r.id)}
+          />
+        ) : (
+          <RowActions
+            editHref={`/admin/products/${r.id}`}
+            confirmText={r.slug}
+            deleteDescription={`Takes ${r.name} off the site. It moves to Archived, where it can be restored.`}
+            onDelete={archiveProductAction.bind(null, r.id)}
+          />
+        ),
     },
   ];
 
@@ -98,6 +126,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
             <option value="">All</option>
             <option value="draft">Draft</option>
             <option value="published">Published</option>
+            <option value="archived">Deleted (archived)</option>
           </select>
         </div>
         <div>

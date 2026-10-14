@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../index";
 import { productImages, products, variants } from "../schema";
 import { paise, type Paise } from "@/lib/money";
@@ -66,7 +66,7 @@ export async function getFreeGiftOptions(): Promise<FreeGiftOption[]> {
         })
         .from(variants)
         .innerJoin(products, eq(products.id, variants.productId))
-        .where(eq(variants.sku, sku))
+        .where(and(eq(variants.sku, sku), eq(products.status, "published")))
         .limit(1)
         .then((r) => r[0]),
     ),

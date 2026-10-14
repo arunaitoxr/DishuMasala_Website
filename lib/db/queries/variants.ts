@@ -58,7 +58,9 @@ export async function getVariantsForPricing(ids: number[]): Promise<VariantPrici
     .from(variants)
     .innerJoin(products, eq(products.id, variants.productId))
     .innerJoin(collections, eq(collections.id, products.collectionId))
-    .where(inArray(variants.id, uniqueIds));
+    // Only published products can be priced or bought: a variant of a draft or deleted (archived)
+    // product comes back as "not found", which drops it from the cart with a notice.
+    .where(and(inArray(variants.id, uniqueIds), eq(products.status, "published")));
 
   const productIds = Array.from(new Set(rows.map((r) => r.productId)));
   const images = productIds.length

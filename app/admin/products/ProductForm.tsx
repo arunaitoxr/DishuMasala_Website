@@ -229,7 +229,11 @@ export function ProductForm({
       <section className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold text-ink">Details</h2>
-          {product && <Badge tone={product.status === "published" ? "ok" : "neutral"}>{product.status}</Badge>}
+          {product && (
+            <Badge tone={product.status === "published" ? "ok" : product.status === "archived" ? "crit" : "neutral"}>
+              {product.status === "archived" ? "deleted (archived)" : product.status}
+            </Badge>
+          )}
         </div>
 
         <div>
@@ -366,7 +370,8 @@ export function ProductForm({
       </section>
 
       {product ? (
-        <ProductImages productId={product.id} productSlug={slug} images={product.images} onChanged={() => router.refresh()} />
+        // The SAVED slug: uploads are keyed under it on the server, so an unsaved slug edit mustn't leak in.
+        <ProductImages productId={product.id} productSlug={product.slug} images={product.images} onChanged={() => router.refresh()} />
       ) : (
         <section className="rounded-lg border border-line bg-surface-2 p-5 text-sm text-ink-2">
           Save the product first — images (and the publish step, which requires alt text on every
@@ -378,7 +383,7 @@ export function ProductForm({
         <Button type="button" variant="solid-ink" disabled={pending} onClick={handleSave}>
           {mode === "create" ? "Create draft" : "Save changes"}
         </Button>
-        {product && (
+        {product && product.status !== "archived" && (
           <Button type="button" variant={product.status === "published" ? "outline" : "gradient"} disabled={pending} onClick={handlePublishToggle}>
             {product.status === "published" ? "Unpublish" : "Publish"}
           </Button>

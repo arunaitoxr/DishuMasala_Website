@@ -92,8 +92,8 @@ test("staff creates a two-variant, three-image product from the admin UI alone a
   await page.goto(`/product/${slug}`);
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
   const buyBox = page.locator("#pdp-buy-box");
-  await expect(buyBox.getByText("₹549")).toBeVisible();
-  await expect(buyBox.getByText("₹600")).toBeVisible(); // struck-through MRP
+  await expect(buyBox.getByText("₹549").first()).toBeVisible(); // also on the variant cards
+  await expect(buyBox.getByText("₹600").first()).toBeVisible(); // struck-through MRP
   const galleryImg = page.locator(`img[alt="${productName} — packshot 1"]`).first();
   await expect(galleryImg).toBeVisible();
 

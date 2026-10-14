@@ -16,7 +16,7 @@
  *     side).
  * Never import this file from app/ or components/ — use lib/storage/storage.ts there instead.
  */
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const endpoint = process.env.STORAGE_ENDPOINT;
@@ -108,6 +108,32 @@ export async function getObject(key: string): Promise<Buffer> {
 export async function deleteObject(key: string): Promise<void> {
   assertConfigured();
   await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+/** Every key under a prefix (paginated through ListObjectsV2). */
+export async function listKeys(prefix: string): Promise<string[]> {
+  assertConfigured();
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const page = await getClient().send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }));
+    for (const item of page.Contents ?? []) if (item.Key) keys.push(item.Key);
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  return keys;
+}
+
+/**
+ * The stored image plus all its sibling derivatives. Uploads write `<prefix>/<id>/<hash>-w<width>.<avif|webp>`
+ * for several widths and record only the largest WebP in the database, so deleting just that one key
+ * used to leave up to five orphaned files behind per image. Returns `[key]` alone for a key that
+ * doesn't follow the derivative naming.
+ */
+export async function listImageFamily(storageKey: string): Promise<string[]> {
+  const match = /^(.*-w)\d+\.(?:webp|avif)$/.exec(storageKey);
+  if (!match) return [storageKey];
+  const family = await listKeys(match[1]);
+  return family.length > 0 ? family : [storageKey];
 }
 
 export interface PresignUploadOptions {

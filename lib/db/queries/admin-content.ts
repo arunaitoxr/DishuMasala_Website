@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { db } from "../index";
+import type { ContentStatus } from "../schema/enums";
 import { pages, posts } from "../schema";
 
 export interface AdminPostRow {
@@ -9,7 +10,7 @@ export interface AdminPostRow {
   slug: string;
   kind: "blog" | "recipe";
   title: string;
-  status: "draft" | "published";
+  status: ContentStatus;
   publishedAt: Date | null;
   author: string | null;
 }
@@ -32,7 +33,7 @@ export interface AdminPostDetail {
   body: unknown;
   coverStorageKey: string | null;
   coverUrl: string | null;
-  status: "draft" | "published";
+  status: ContentStatus;
   author: string | null;
   publishedAt: Date | null;
   seoTitle: string | null;
@@ -62,7 +63,7 @@ export interface AdminPageRow {
   id: number;
   slug: string;
   title: string;
-  status: "draft" | "published";
+  status: ContentStatus;
   updatedAt: Date;
 }
 
@@ -75,7 +76,7 @@ export interface AdminPageDetail {
   slug: string;
   title: string;
   body: unknown;
-  status: "draft" | "published";
+  status: ContentStatus;
   updatedAt: Date;
 }
 
