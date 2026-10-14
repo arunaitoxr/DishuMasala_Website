@@ -5,6 +5,9 @@ import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { formatINR, paise } from "@/lib/money";
 import { listAdminCustomers, ADMIN_CUSTOMERS_PAGE_SIZE, type AdminCustomerRow } from "@/lib/db/queries/admin-customers";
 import { formatDate } from "@/lib/dates";
+import { RowActions } from "@/components/admin/RowActions";
+import { deleteCustomerAction } from "./actions";
+import { Button } from "@/components/ui/Button";
 
 export const metadata = { title: "Customers" };
 
@@ -42,11 +45,29 @@ export default async function AdminCustomersPage({ searchParams }: { searchParam
     { key: "orders", label: "Orders", align: "right", render: (r) => r.orderCount },
     { key: "ltv", label: "Lifetime value", align: "right", render: (r) => formatINR(paise(r.lifetimeValuePaise)) },
     { key: "since", label: "Customer since", render: (r) => formatDate(r.createdAt) },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) => (
+        <RowActions
+          editHref={`/admin/customers/${r.id}`}
+          confirmText={r.email}
+          deleteDescription={`Deletes ${r.name}'s account, login, saved addresses and wishlist.${r.orderCount > 0 ? " Their orders stay on record." : ""}`}
+          onDelete={deleteCustomerAction.bind(null, r.id)}
+        />
+      ),
+    },
   ];
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-ink">Customers</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl font-semibold text-ink">Customers</h1>
+        <Button asChild variant="solid-ink" size="sm">
+          <Link href="/admin/customers/new">Add customer</Link>
+        </Button>
+      </div>
 
       <form method="GET" action="/admin/customers" className="mt-5 flex items-end gap-3">
         <div>

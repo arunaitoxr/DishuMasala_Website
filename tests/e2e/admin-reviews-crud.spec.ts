@@ -22,6 +22,7 @@ async function deleteFromList(page: Page, rowText: string) {
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Type delete to confirm").fill("delete");
   await dialog.getByRole("button", { name: "Delete" }).click();
+  await expect(dialog).toBeHidden({ timeout: 15_000 }); // the delete has finished (see admin-coupons.spec.ts)
   await expect(row).toHaveCount(0, { timeout: 15_000 });
 }
 

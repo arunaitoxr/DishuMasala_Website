@@ -6,7 +6,9 @@ import { formatINR, paise } from "@/lib/money";
 import { getAdminCustomerById, getOrdersForCustomer, getReviewsForCustomer } from "@/lib/db/queries/admin-customers";
 import { getAddressesForUser } from "@/lib/db/queries/addresses";
 import { getWishlistCards } from "@/lib/db/queries/wishlist";
-import { CustomerContactForm } from "../CustomerContactForm";
+import { CustomerForm } from "../CustomerForm";
+import { CustomerAddresses } from "../CustomerAddresses";
+import { DeleteCustomer } from "../DeleteCustomer";
 import { formatDate } from "@/lib/dates";
 
 export const metadata = { title: "Customer" };
@@ -23,7 +25,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
   if (!customer) notFound();
 
   const [orders, addresses, wishlist, reviews] = await Promise.all([
-    getOrdersForCustomer(customerId),
+    getOrdersForCustomer(customerId, customer.email),
     getAddressesForUser(customerId),
     getWishlistCards(customerId),
     getReviewsForCustomer(customerId),
@@ -39,7 +41,13 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
       <p className="text-sm text-ink-2">{customer.email}</p>
 
       <div className="mt-6">
-        <CustomerContactForm id={customer.id} name={customer.name} phone={customer.phone} />
+        {customer.role === "customer" ? (
+          <CustomerForm mode="edit" customer={customer} />
+        ) : (
+          <p className="rounded-md border border-line bg-surface-2 px-4 py-3 text-sm text-ink-2">
+            This is a {customer.role} account — staff accounts aren&apos;t edited from Customers.
+          </p>
+        )}
       </div>
 
       <section className="mt-8 rounded-lg border border-line bg-surface p-5">
@@ -72,23 +80,11 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
         )}
       </section>
 
-      <section className="mt-6 rounded-lg border border-line bg-surface p-5">
-        <h2 className="font-display text-lg font-semibold text-ink">Addresses ({addresses.length})</h2>
-        {addresses.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-3">No saved addresses.</p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {addresses.map((a) => (
-              <li key={a.id} className="text-sm text-ink-2">
-                <span className="font-medium text-ink">{a.name}</span> · {a.phone}
-                <br />
-                {a.line1}{a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.state} {a.pincode}
-                {a.isDefault && <Badge tone="gold" className="ml-2">Default</Badge>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="mt-6">
+        {customer.role === "customer" ? (
+          <CustomerAddresses customerId={customer.id} addresses={addresses} />
+        ) : null}
+      </div>
 
       <section className="mt-6 rounded-lg border border-line bg-surface p-5">
         <h2 className="font-display text-lg font-semibold text-ink">Reviews ({reviews.length})</h2>
@@ -119,6 +115,11 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
           </ul>
         )}
       </section>
+      {customer.role === "customer" && (
+        <div className="mt-8">
+          <DeleteCustomer id={customer.id} email={customer.email} orderCount={orders.length} />
+        </div>
+      )}
     </div>
   );
 }

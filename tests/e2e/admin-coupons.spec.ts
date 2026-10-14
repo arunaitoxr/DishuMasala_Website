@@ -88,6 +88,9 @@ test("staff create, open, apply, re-save and delete coupons", async ({ page }) =
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(`Type ${fixedCode} to confirm`).fill(fixedCode);
   await dialog.getByRole("button", { name: "Delete" }).click();
+  // Wait for the dialog to close — the delete has finished — before checking the list (while the
+  // modal is open the table is hidden from the accessibility tree, so a row "count of 0" proves nothing).
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
   await expect(page.getByRole("row", { name: new RegExp(fixedCode) })).toHaveCount(0);
 
   // …and from the coupon's own page.
