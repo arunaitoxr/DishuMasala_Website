@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -84,6 +85,8 @@ export const orders = pgTable("orders", {
   // phone/email lookups to hit an index too, not just the order-number unique index above.
   index("orders_phone_idx").on(t.phone),
   index("orders_email_idx").on(t.email),
+  // Guest orders are matched to a customer, and coupon limits are counted, by lower(email).
+  index("orders_email_lower_idx").on(sql`lower(${t.email})`),
 ]);
 
 export const orderItems = pgTable("order_items", {

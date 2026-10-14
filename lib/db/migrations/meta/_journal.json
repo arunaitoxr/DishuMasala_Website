@@ -148,6 +148,13 @@
       "when": 1791956353716,
       "tag": "0020_enable_rls_public_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791965339200,
+      "tag": "0021_security_fixes",
+      "breakpoints": true
     }
   ]
 }
