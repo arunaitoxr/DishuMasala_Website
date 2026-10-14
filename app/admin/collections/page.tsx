@@ -4,6 +4,8 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { Button } from "@/components/ui/Button";
 import { listAdminCollections, type AdminCollectionRow } from "@/lib/db/queries/admin-collections";
+import { RowActions } from "@/components/admin/RowActions";
+import { deleteCollectionAction } from "./actions";
 
 export const metadata = { title: "Collections" };
 
@@ -19,6 +21,19 @@ export default async function AdminCollectionsPage() {
     { key: "slug", label: "Slug", render: (r) => r.slug },
     { key: "tagline", label: "Tagline", render: (r) => r.tagline ?? "—" },
     { key: "accent", label: "Accent token", render: (r) => r.accentToken ?? "—" },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) => (
+        <RowActions
+          editHref={`/admin/collections/${r.id}`}
+          confirmText={r.slug}
+          deleteDescription={`Deletes the ${r.title} collection. Only possible once no product belongs to it.`}
+          onDelete={deleteCollectionAction.bind(null, r.id)}
+        />
+      ),
+    },
   ];
 
   return (

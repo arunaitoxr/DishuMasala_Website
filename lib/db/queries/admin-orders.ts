@@ -89,8 +89,10 @@ function buildWhere(filters: AdminOrderFilters): SQL | undefined {
   const conditions: SQL[] = [];
   if (filters.status) conditions.push(eq(orders.status, filters.status));
   if (filters.paymentMethod) conditions.push(eq(orders.paymentMethod, filters.paymentMethod));
-  if (filters.dateFrom) conditions.push(gte(orders.placedAt, new Date(`${filters.dateFrom}T00:00:00.000Z`)));
-  if (filters.dateTo) conditions.push(lte(orders.placedAt, new Date(`${filters.dateTo}T23:59:59.999Z`)));
+  // The From/To dates are days in IST (the store's day, CLAUDE.md §4), not UTC — read as UTC, "today"
+  // ran from 05:30 to 05:29 the next morning.
+  if (filters.dateFrom) conditions.push(gte(orders.placedAt, new Date(`${filters.dateFrom}T00:00:00.000+05:30`)));
+  if (filters.dateTo) conditions.push(lte(orders.placedAt, new Date(`${filters.dateTo}T23:59:59.999+05:30`)));
   if (filters.q) {
     const like = `%${filters.q}%`;
     // order_number hits its unique index; phone/email hit the btree indexes added this phase.

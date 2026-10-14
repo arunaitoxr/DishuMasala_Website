@@ -22,6 +22,7 @@ import {
   recordRefundDb,
   addStaffNoteDb,
   cancelOrderDb,
+  deleteUnpaidOrderDb,
 } from "@/lib/db/mutations/admin-orders";
 import { pushOrderToShiprocket } from "@/lib/shiprocket";
 import { sendOrderConfirmationEmail } from "@/lib/email";
@@ -328,4 +329,26 @@ export async function addStaffNoteAction(input: z.infer<typeof noteSchema>): Pro
   });
   await revalidateOrder(order.orderNumber);
   return { ok: true, message: "Note added." };
+}
+
+/** Deletes a never-paid order (typed confirmation of its order number). Paid orders can't be deleted. */
+export async function deleteUnpaidOrderAction(orderId: number, confirmNumber: string): Promise<AdminActionResult> {
+  const session = await requireStaffOrAdmin();
+  if (!session.ok) return { ok: false, error: session.error === "unauthenticated" ? "Sign in required." : "Staff access required." };
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+  if (confirmNumber.trim().toUpperCase() !== order.orderNumber.toUpperCase()) return { ok: false, error: `Type ${order.orderNumber} exactly to confirm.` };
+
+  const result = await deleteUnpaidOrderDb(orderId);
+  if (!result.ok) return result;
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    action: "order.delete",
+    entity: "order_deleted",
+    entityId: orderId,
+    diff: { orderNumber: order.orderNumber, email: order.email, totalPaise: order.totalPaise, paymentStatus: order.paymentStatus },
+  });
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  return { ok: true, message: `Order ${order.orderNumber} deleted.` };
 }

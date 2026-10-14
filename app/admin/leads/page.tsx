@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { listAdminPhoneLeads, ADMIN_LEADS_PAGE_SIZE } from "@/lib/db/queries/admin-leads";
 import { formatDate, formatDateTime } from "@/lib/dates";
+import { InboxItemActions } from "../inbox/InboxItemActions";
 
 export const metadata = { title: "Phone leads" };
 
@@ -55,12 +56,13 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
               <th scope="col" className="border-b border-line px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.06em] text-ink-2">Popup shown on</th>
               <th scope="col" className="border-b border-line px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.06em] text-ink-2">Products viewed</th>
               <th scope="col" className="border-b border-line px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.06em] text-ink-2">Captured</th>
+              <th scope="col" className="border-b border-line px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.06em] text-ink-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-ink-3">No phone numbers captured yet.</td>
+                <td colSpan={6} className="px-4 py-10 text-center text-ink-3">No phone numbers captured yet.</td>
               </tr>
             ) : (
               rows.map((r) => (
@@ -70,6 +72,9 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
                   <td className="px-4 py-3 text-ink-2">{r.sourcePath ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink">{r.productViews}</td>
                   <td className="px-4 py-3 text-ink-2">{formatDate(r.createdAt)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <InboxItemActions kind="lead" id={r.id} />
+                  </td>
                 </tr>
               ))
             )}

@@ -7,6 +7,7 @@ import { formatINR } from "@/lib/money";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { OrderActions } from "./OrderActions";
 import { formatDateTime } from "@/lib/dates";
+import { DeleteOrder } from "./DeleteOrder";
 
 export const metadata = { title: "Order detail" };
 
@@ -170,6 +171,15 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
           </ol>
         )}
       </section>
+
+      {(order.paymentStatus === "pending" || order.paymentStatus === "failed") &&
+        !order.razorpayPaymentId &&
+        !order.shiprocketOrderId &&
+        (order.status === "pending" || order.status === "cancelled") && (
+          <div className="mt-8">
+            <DeleteOrder id={order.id} orderNumber={order.orderNumber} />
+          </div>
+        )}
     </div>
   );
 }

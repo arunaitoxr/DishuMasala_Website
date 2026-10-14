@@ -1,8 +1,8 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../index";
-import { collections } from "../schema";
+import { collections, products } from "../schema";
 
 export interface CollectionInput {
   slug: string;
@@ -22,4 +22,14 @@ export async function createCollectionDb(input: CollectionInput): Promise<number
 
 export async function updateCollectionDb(id: number, input: CollectionInput): Promise<void> {
   await db.update(collections).set(input).where(eq(collections.id, id));
+}
+
+/** Deletes a collection only when no product — published, draft or archived — still belongs to it
+ * (the products → collections foreign key is RESTRICT, and moving products is a deliberate choice). */
+export async function deleteCollectionDb(id: number): Promise<{ ok: true } | { ok: false; productCount: number }> {
+  const [row] = await db.select({ n: sql<number>`count(*)` }).from(products).where(eq(products.collectionId, id));
+  const productCount = Number(row?.n ?? 0);
+  if (productCount > 0) return { ok: false, productCount };
+  await db.delete(collections).where(eq(collections.id, id));
+  return { ok: true };
 }

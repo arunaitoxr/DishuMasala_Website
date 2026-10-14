@@ -8,7 +8,7 @@ import "server-only";
  */
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../index";
-import { orders, orderItems, variants, products, collections } from "../schema";
+import { auditLog, couponRedemptions, orders, orderItems, variants, products, collections } from "../schema";
 import { validateStatusTransition } from "@/lib/commerce/order-status";
 import type { OrderStatus } from "@/types/order";
 
@@ -151,5 +151,53 @@ export async function cancelOrderDb(orderId: number, reason: string): Promise<Ca
       affectedProductSlugs: Array.from(new Set(lineProductRows.map((r) => r.productSlug))),
       affectedCollectionSlugs: Array.from(new Set(lineProductRows.map((r) => r.collectionSlug))),
     };
+  });
+}
+
+export type DeleteOrderOutcome = { ok: true } | { ok: false; error: string };
+
+/**
+ * Deletes an order that was never paid — an abandoned or failed checkout, a test — with its line
+ * items and its audit entries (client request 2026-10-13). A paid order is a financial record
+ * (GST invoice, payment, possible refund) and is never deletable: CLAUDE.md §9's rule stands for
+ * those; cancel or refund it instead. Stock still reserved by a pending order is released first
+ * (a failed or cancelled order already released its stock).
+ */
+export async function deleteUnpaidOrderDb(orderId: number): Promise<DeleteOrderOutcome> {
+  return db.transaction(async (tx) => {
+    const [order] = await tx
+      .select({
+        status: orders.status,
+        paymentStatus: orders.paymentStatus,
+        razorpayPaymentId: orders.razorpayPaymentId,
+        shiprocketOrderId: orders.shiprocketOrderId,
+        refundedAt: orders.refundedAt,
+      })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .for("update")
+      .limit(1);
+    if (!order) return { ok: false, error: "Order not found." };
+    const neverPaid =
+      (order.paymentStatus === "pending" || order.paymentStatus === "failed") &&
+      !order.razorpayPaymentId &&
+      !order.refundedAt &&
+      !order.shiprocketOrderId &&
+      (order.status === "pending" || order.status === "cancelled");
+    if (!neverPaid) return { ok: false, error: "Only orders that were never paid can be deleted. Cancel or refund this one instead." };
+
+    if (order.paymentStatus === "pending" && order.status === "pending") {
+      await tx.execute(sql`
+        UPDATE ${variants}
+        SET stock_qty = stock_qty + oi.qty, in_stock = true
+        FROM ${orderItems} oi
+        WHERE ${variants}.id = oi.variant_id AND oi.order_id = ${orderId} AND ${variants}.stock_qty IS NOT NULL
+      `);
+    }
+    await tx.delete(couponRedemptions).where(eq(couponRedemptions.orderId, orderId));
+    await tx.delete(orderItems).where(eq(orderItems.orderId, orderId));
+    await tx.delete(auditLog).where(and(eq(auditLog.entity, "order"), eq(auditLog.entityId, String(orderId))));
+    await tx.delete(orders).where(eq(orders.id, orderId));
+    return { ok: true };
   });
 }

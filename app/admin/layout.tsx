@@ -4,6 +4,7 @@ import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getUserById } from "@/lib/db/queries/users";
 import { SignOutButton } from "@/components/account/SignOutButton";
 import { Badge } from "@/components/ui/Badge";
+import { countNewInboxItems } from "@/lib/db/queries/admin-inbox";
 
 export const metadata = { title: { template: "%s — Dishu Admin", default: "Dishu Admin" }, robots: { index: false, follow: false } };
 
@@ -29,7 +30,8 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const session = await requireStaffOrAdmin();
   if (!session.ok) redirect("/login?callbackUrl=/admin");
 
-  const staffUser = await getUserById(session.user.id);
+  const [staffUser, inboxCounts] = await Promise.all([getUserById(session.user.id), countNewInboxItems()]);
+  const inboxNew = inboxCounts.messages + inboxCounts.enquiries;
 
   const navItems: Array<{ href: string; label: string; live: boolean }> = [
     { href: "/admin", label: "Dashboard", live: true },
@@ -39,6 +41,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     { href: "/admin/coupons", label: "Coupons", live: true },
     { href: "/admin/reviews", label: "Reviews", live: true },
     { href: "/admin/customers", label: "Customers", live: true },
+    { href: "/admin/inbox", label: inboxNew > 0 ? `Inbox (${inboxNew} new)` : "Inbox", live: true },
     { href: "/admin/leads", label: "Phone leads", live: true },
     { href: "/admin/content", label: "Content", live: true },
     { href: "/admin/settings", label: "Settings", live: true },

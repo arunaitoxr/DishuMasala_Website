@@ -16,7 +16,7 @@ import { revalidatePath } from "next/cache";
 import { updateTag } from "next/cache";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit";
-import { createCollectionDb, updateCollectionDb, type CollectionInput } from "@/lib/db/mutations/admin-collections";
+import { createCollectionDb, deleteCollectionDb, updateCollectionDb, type CollectionInput } from "@/lib/db/mutations/admin-collections";
 import { isCollectionSlugTaken, getAdminCollectionById } from "@/lib/db/queries/admin-collections";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
@@ -101,4 +101,25 @@ export async function updateCollectionAction(id: number, input: z.infer<typeof c
   });
   revalidateStorefront();
   return { ok: true, message: "Collection saved — storefront order updated live." };
+}
+
+/** Deletes an empty collection (typed confirmation of its slug). */
+export async function deleteCollectionAction(id: number, confirmSlug: string): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const existing = await getAdminCollectionById(id);
+  if (!existing) return { ok: false, error: "Collection not found." };
+  if (confirmSlug.trim() !== existing.slug) return { ok: false, error: `Type ${existing.slug} exactly to confirm.` };
+
+  const result = await deleteCollectionDb(id);
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: `${existing.title} still has ${result.productCount} product${result.productCount === 1 ? "" : "s"} (including drafts and deleted ones). Move them to another collection first.`,
+    };
+  }
+  await writeAuditLog({ actorUserId: auth.user.id, action: "collection.delete", entity: "collection", entityId: id, diff: { slug: existing.slug, title: existing.title } });
+  revalidateStorefront();
+  revalidatePath("/admin/collections");
+  return { ok: true, message: "Collection deleted." };
 }

@@ -13,6 +13,8 @@ import {
   type AdminOrderFilters,
 } from "@/lib/db/queries/admin-orders";
 import { formatDateTime } from "@/lib/dates";
+import { RowActions } from "@/components/admin/RowActions";
+import { deleteUnpaidOrderAction } from "./actions";
 
 export const metadata = { title: "Orders" };
 
@@ -46,6 +48,10 @@ interface OrdersPageProps {
  * range, search) live entirely in the URL, matching Phase 3's shop-filter discipline. This is the
  * exact query the perf-test report (scripts/seed-perf-orders.ts) times against 5,000 rows.
  */
+function isNeverPaid(r: AdminOrderRow): boolean {
+  return (r.paymentStatus === "pending" || r.paymentStatus === "failed") && (r.status === "pending" || r.status === "cancelled") && !r.shiprocketOrderId;
+}
+
 export default async function AdminOrdersPage({ searchParams }: OrdersPageProps) {
   const session = await requireStaffOrAdmin();
   if (!session.ok) redirect("/login?callbackUrl=/admin/orders");
@@ -80,6 +86,25 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
       label: "Placed",
       sortKey: "placed_at",
       render: (r) => formatDateTime(r.placedAt, { dateStyle: "medium", timeStyle: "short" }),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      // Delete only for orders that were never paid (abandoned/failed checkouts, tests) — the
+      // server re-checks; paid orders are financial records and can only be cancelled or refunded.
+      render: (r) =>
+        isNeverPaid(r) ? (
+          <RowActions
+            editHref={`/admin/orders/${r.orderNumber}`}
+            editLabel="View"
+            confirmText={r.orderNumber}
+            deleteDescription={`${r.orderNumber} was never paid. It and its line items are removed for good.`}
+            onDelete={deleteUnpaidOrderAction.bind(null, r.id)}
+          />
+        ) : (
+          <RowActions editHref={`/admin/orders/${r.orderNumber}`} editLabel="View" />
+        ),
     },
   ];
 

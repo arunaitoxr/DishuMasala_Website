@@ -1,7 +1,7 @@
 import "server-only";
 
 import { db } from "../index";
-import { bulkEnquiries, contactMessages, phoneLeads, visitorEvents } from "../schema";
+import { bulkEnquiries, contactMessages, newsletterSubs, phoneLeads, visitorEvents } from "../schema";
 
 export interface UpsertPhoneLeadInput {
   phone: string;
@@ -66,4 +66,9 @@ export interface InsertContactMessageInput {
 /** Called only from app/api/marketing/contact/route.ts, which Zod-validates every field first. */
 export async function insertContactMessage(input: InsertContactMessageInput): Promise<void> {
   await db.insert(contactMessages).values(input);
+}
+
+/** Newsletter sign-up from the footer box — idempotent: signing up twice keeps the one row. */
+export async function subscribeNewsletter(email: string, source: string | null): Promise<void> {
+  await db.insert(newsletterSubs).values({ email: email.trim().toLowerCase(), source }).onConflictDoNothing({ target: newsletterSubs.email });
 }

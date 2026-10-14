@@ -12,11 +12,11 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-/** Client-side validation only — there is no submission endpoint yet (that's a later phase; the
- * `newsletter_subs` table already exists in the schema for when there is one). Submitting a valid
- * address just shows a local confirmation state; nothing is sent anywhere. */
+/** Footer newsletter sign-up, saved through app/api/marketing/newsletter (it used to confirm without
+ * sending anything). The thank-you only shows once the server has the address. */
 export function NewsletterForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -24,10 +24,24 @@ export function NewsletterForm() {
     reset,
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const onSubmit = handleSubmit(async () => {
-    await new Promise((r) => setTimeout(r, 250));
-    setSubmitted(true);
-    reset();
+  const onSubmit = handleSubmit(async ({ email }) => {
+    setFailed(null);
+    try {
+      const res = await fetch("/api/marketing/newsletter", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, sourcePath: window.location.pathname }),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!res.ok || !data?.ok) {
+        setFailed(data?.error ?? "Couldn't sign you up just now — please try again.");
+        return;
+      }
+      setSubmitted(true);
+      reset();
+    } catch {
+      setFailed("Couldn't sign you up just now — please try again.");
+    }
   });
 
   if (submitted) {
@@ -58,6 +72,11 @@ export function NewsletterForm() {
           Subscribe
         </Button>
       </div>
+      {failed && (
+        <p role="alert" className="text-xs text-crit">
+          {failed}
+        </p>
+      )}
       {errors.email && (
         <p id="newsletter-email-error" role="alert" className="text-xs text-crit">
           {errors.email.message}

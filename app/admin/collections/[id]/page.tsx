@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getAdminCollectionById } from "@/lib/db/queries/admin-collections";
 import { CollectionForm } from "../CollectionForm";
+import { DeleteCollection } from "../DeleteCollection";
 
 export const metadata = { title: "Edit collection" };
 
@@ -21,6 +22,9 @@ export default async function EditCollectionPage({ params }: { params: Promise<{
       <h1 className="font-display text-2xl font-semibold text-ink">{collection.title}</h1>
       <div className="mt-6">
         <CollectionForm mode="edit" collection={collection} />
+      </div>
+      <div className="mt-8 max-w-2xl">
+        <DeleteCollection id={collection.id} slug={collection.slug} title={collection.title} />
       </div>
     </div>
   );
