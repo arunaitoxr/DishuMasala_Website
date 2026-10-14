@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { getAdminPageById } from "@/lib/db/queries/admin-content";
 import { PageForm } from "../PageForm";
+import { DeleteContent } from "../../DeleteContent";
+import { isRequiredPageSlug } from "@/lib/content/page-slugs";
 
 export const metadata = { title: "Edit page" };
 
@@ -22,6 +24,13 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
       <div className="mt-6">
         <PageForm mode="edit" page={page} />
       </div>
+      {isRequiredPageSlug(page.slug) ? (
+        <p className="mt-8 max-w-3xl text-sm text-ink-3">This page is linked from every page of the site (footer, checkout), so it can be edited or unpublished but not deleted or renamed.</p>
+      ) : (
+        <div className="mt-8 max-w-3xl">
+          <DeleteContent kind="page" id={page.id} slug={page.slug} />
+        </div>
+      )}
     </div>
   );
 }

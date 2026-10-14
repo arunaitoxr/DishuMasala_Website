@@ -10,6 +10,8 @@ export const posts = pgTable("posts", {
   // Tiptap JSON document.
   body: jsonb().notNull(),
   coverStorageKey: text("cover_storage_key"),
+  /** Alt text for the cover image — read aloud and shown if the image fails; empty means the title is used. */
+  coverAlt: text("cover_alt"),
   status: contentStatusEnum().notNull().default("draft"),
   author: text(),
   publishedAt: timestamp("published_at", { withTimezone: true }),

@@ -3,7 +3,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
 import { useEffect } from "react";
 import type { TiptapDoc } from "@/lib/content/tiptap-schema";
 
@@ -28,14 +27,30 @@ export function TiptapEditor({
 }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // StarterKit v3 brings more than the stored-content allowlist (lib/content/tiptap-schema.ts)
+      // accepts — strike, underline, inline code, code blocks, horizontal rules, h5/h6, and its own
+      // Link. Reachable by shortcut, "---" / "```" or paste, any of them made the post fail to save
+      // with a bare "Invalid input". Switching them off keeps the editor and the schema in step, and
+      // configuring StarterKit's Link replaces the second Link that was registered on top of it.
+      StarterKit.configure({
+        code: false,
+        codeBlock: false,
+        horizontalRule: false,
+        strike: false,
+        underline: false,
+        heading: { levels: [2, 3, 4] },
+        link: { openOnClick: false, HTMLAttributes: { rel: "noopener noreferrer nofollow" } },
+      }),
       Image,
-      Link.configure({ openOnClick: false, HTMLAttributes: { rel: "noopener noreferrer nofollow" } }),
     ],
     content: content as unknown as Record<string, unknown>,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      onChange(editor.getJSON() as unknown as TiptapDoc);
+      // A plain-JSON copy, not getJSON() itself: ProseMirror builds node `attrs` (heading level, image
+      // src/alt) with a null prototype, and the server-action serializer can't send such an object as
+      // data — it arrived on the server as an opaque reference, so every post or page containing a
+      // heading or an image failed to save with "Invalid input".
+      onChange(JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc);
     },
     editorProps: {
       attributes: {

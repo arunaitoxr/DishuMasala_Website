@@ -29,7 +29,7 @@ export default async function BlogIndexPage() {
               <Link href={`/blog/${post.slug}`} className="group block">
                 {post.coverUrl && (
                   <div className="relative mb-3 aspect-video overflow-hidden rounded-lg bg-surface-2 shadow-card">
-                    <Image src={post.coverUrl} alt="" fill sizes="(max-width: 640px) 100vw, 480px" className="object-cover transition-transform duration-200 group-hover:scale-[1.02]" />
+                    <Image src={post.coverUrl} alt={post.coverAlt ?? ""} fill sizes="(max-width: 640px) 100vw, 480px" className="object-cover transition-transform duration-200 group-hover:scale-[1.02]" />
                   </div>
                 )}
                 <h2 className="font-display text-xl font-semibold text-ink group-hover:underline">{post.title}</h2>

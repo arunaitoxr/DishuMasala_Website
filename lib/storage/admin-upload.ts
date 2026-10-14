@@ -35,6 +35,11 @@ export async function finalizeContentImageUpload(
   slug: string,
   tmpKey: string,
 ): Promise<{ url: string; storageKey: string; width: number; height: number }> {
+  // Only a temp key this flow's own presign step made — finalize fetches and then DELETES the key, so
+  // trusting any client-supplied key would let a staff session delete arbitrary live files.
+  if (!tmpKey.startsWith(`${prefix}/${slug}/tmp-`) || tmpKey.includes("..") || !/^[a-z0-9/._-]+$/i.test(tmpKey)) {
+    throw new Error("That upload doesn't belong to this item — please upload the file again.");
+  }
   const originalBuffer = await getObject(tmpKey);
   const processed = await processImage(originalBuffer);
   const hash = createHash("sha256").update(originalBuffer).digest("hex").slice(0, 16);

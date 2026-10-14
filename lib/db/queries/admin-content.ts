@@ -32,6 +32,7 @@ export interface AdminPostDetail {
   excerpt: string | null;
   body: unknown;
   coverStorageKey: string | null;
+  coverAlt: string | null;
   coverUrl: string | null;
   status: ContentStatus;
   author: string | null;

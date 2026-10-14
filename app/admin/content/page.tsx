@@ -6,8 +6,16 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { listAdminPosts, listAdminPages, type AdminPostRow, type AdminPageRow } from "@/lib/db/queries/admin-content";
 import { formatDate, formatDateTime } from "@/lib/dates";
+import { RowActions } from "@/components/admin/RowActions";
+import { isRequiredPageSlug } from "@/lib/content/page-slugs";
+import { deletePageAction, deletePostAction } from "./actions";
 
 export const metadata = { title: "Content" };
+
+/** Published with a future date: the storefront shows it from that moment on. */
+function isScheduled(r: AdminPostRow): boolean {
+  return r.status === "published" && r.publishedAt != null && new Date(r.publishedAt).getTime() > Date.now();
+}
 
 export default async function AdminContentPage() {
   const session = await requireStaffOrAdmin();
@@ -18,8 +26,28 @@ export default async function AdminContentPage() {
   const postColumns: DataTableColumn<AdminPostRow>[] = [
     { key: "title", label: "Title", render: (r) => <span className="font-medium text-ink">{r.title}</span> },
     { key: "kind", label: "Kind", render: (r) => <Badge tone="neutral">{r.kind}</Badge> },
-    { key: "status", label: "Status", render: (r) => <Badge tone={r.status === "published" ? "ok" : "neutral"}>{r.status}</Badge> },
+    {
+      key: "status",
+      label: "Status",
+      render: (r) => {
+        const scheduled = isScheduled(r);
+        return <Badge tone={scheduled ? "warn" : r.status === "published" ? "ok" : "neutral"}>{scheduled ? "scheduled" : r.status}</Badge>;
+      },
+    },
     { key: "publishedAt", label: "Published", render: (r) => (r.publishedAt ? formatDateTime(r.publishedAt) : "—") },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) => (
+        <RowActions
+          editHref={`/admin/content/posts/${r.id}`}
+          confirmText={r.slug}
+          deleteDescription={`Deletes “${r.title}” and its cover image for good. To keep it, use Unpublish.`}
+          onDelete={deletePostAction.bind(null, r.id)}
+        />
+      ),
+    },
   ];
 
   const pageColumns: DataTableColumn<AdminPageRow>[] = [
@@ -27,6 +55,22 @@ export default async function AdminContentPage() {
     { key: "slug", label: "Slug", render: (r) => `/${r.slug}` },
     { key: "status", label: "Status", render: (r) => <Badge tone={r.status === "published" ? "ok" : "neutral"}>{r.status}</Badge> },
     { key: "updatedAt", label: "Updated", render: (r) => formatDate(r.updatedAt) },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "right",
+      render: (r) =>
+        isRequiredPageSlug(r.slug) ? (
+          <RowActions editHref={`/admin/content/pages/${r.id}`} />
+        ) : (
+          <RowActions
+            editHref={`/admin/content/pages/${r.id}`}
+            confirmText={r.slug}
+            deleteDescription={`Deletes “${r.title}”; /${r.slug} stops working. To keep it, use Unpublish.`}
+            onDelete={deletePageAction.bind(null, r.id)}
+          />
+        ),
+    },
   ];
 
   return (

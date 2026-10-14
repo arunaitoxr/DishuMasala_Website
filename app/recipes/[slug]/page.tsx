@@ -56,7 +56,7 @@ export default async function RecipePage({ params }: PageProps) {
 
       {post.coverUrl && (
         <div className="relative mt-4 aspect-video overflow-hidden rounded-lg bg-surface-2 shadow-card">
-          <Image src={post.coverUrl} alt="" fill sizes="(max-width: 768px) 100vw, 768px" priority className="object-cover" />
+          <Image src={post.coverUrl} alt={post.coverAlt ?? ""} fill sizes="(max-width: 768px) 100vw, 768px" priority className="object-cover" />
         </div>
       )}
 

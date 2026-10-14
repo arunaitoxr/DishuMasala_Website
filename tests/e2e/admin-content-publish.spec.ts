@@ -50,4 +50,12 @@ test("publishing a post makes it appear on /blog live, no redeploy", async ({ pa
 
   await page.goto(`/blog/${slug}`);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
+
+  // Clean up through the real admin control, so the test post doesn't stay on the blog.
+  await page.goto(editUrl);
+  await page.getByRole("button", { name: "Delete post" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(`Type ${slug} to confirm`).fill(slug);
+  await dialog.getByRole("button", { name: "Delete post" }).click();
+  await expect(page).toHaveURL(/\/admin\/content\/?$/, { timeout: 15_000 });
 });

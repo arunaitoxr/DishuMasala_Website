@@ -78,8 +78,10 @@ const elementNodeSchema: z.ZodType<TiptapElementNode> = z.lazy(() =>
       .object({
         level: z.number().int().min(1).max(4).optional(),
         src: z.string().url().optional(),
-        alt: z.string().optional(),
-        title: z.string().optional(),
+        // Tiptap's Image node always emits `alt`/`title`, as null when empty — `.optional()` alone
+        // rejected that null and failed every save of a post or page with an inline image.
+        alt: z.string().nullish(),
+        title: z.string().nullish(),
       })
       .catchall(z.unknown())
       .optional(),

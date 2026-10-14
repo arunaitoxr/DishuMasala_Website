@@ -48,6 +48,7 @@ export function PostForm({
   const [body, setBody] = useState<TiptapDoc>((post?.body as TiptapDoc) ?? EMPTY_DOC);
   const [coverStorageKey, setCoverR2Key] = useState<string | null>(post?.coverStorageKey ?? null);
   const [coverUrl, setCoverUrl] = useState<string | null>(post?.coverUrl ?? null);
+  const [coverAlt, setCoverAlt] = useState(post?.coverAlt ?? "");
   const [seoTitle, setSeoTitle] = useState(post?.seoTitle ?? "");
   const [seoDescription, setSeoDescription] = useState(post?.seoDescription ?? "");
   const [relatedProductIds, setRelatedProductIds] = useState<number[]>(post?.relatedProductIds ?? []);
@@ -118,7 +119,7 @@ export function PostForm({
   }
 
   function buildPayload() {
-    return { slug, kind, title, excerpt: excerpt || null, body, coverStorageKey, author: author || null, seoTitle: seoTitle || null, seoDescription: seoDescription || null, relatedProductIds };
+    return { slug, kind, title, excerpt: excerpt || null, body, coverStorageKey, coverAlt: coverStorageKey ? coverAlt || null : null, author: author || null, seoTitle: seoTitle || null, seoDescription: seoDescription || null, relatedProductIds };
   }
 
   function handleSave() {
@@ -199,13 +200,37 @@ export function PostForm({
             <p className="mb-1 text-sm font-medium text-ink">Cover image</p>
             {coverUrl && (
               <div className="relative mb-2 aspect-video overflow-hidden rounded-md bg-surface-2">
-                <Image src={coverUrl} alt="" fill sizes="500px" className="object-cover" />
+                <Image src={coverUrl} alt={coverAlt} fill sizes="500px" className="object-cover" />
               </div>
             )}
-            <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { void handleCoverChange(e.target.files); e.target.value = ""; }} />
-            <Button type="button" variant="outline" size="sm" onClick={() => coverInputRef.current?.click()}>
-              {coverUrl ? "Replace cover" : "Upload cover"}
-            </Button>
+            <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Cover image file" onChange={(e) => { void handleCoverChange(e.target.files); e.target.value = ""; }} />
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => coverInputRef.current?.click()}>
+                {coverUrl ? "Replace cover" : "Upload cover"}
+              </Button>
+              {coverUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-crit"
+                  onClick={() => {
+                    setCoverR2Key(null);
+                    setCoverUrl(null);
+                    setCoverAlt("");
+                  }}
+                >
+                  Remove cover
+                </Button>
+              )}
+            </div>
+            {coverUrl && (
+              <div className="mt-3">
+                <label htmlFor="coverAlt" className="mb-1 block text-sm font-medium text-ink">Cover image alt text</label>
+                <Input id="coverAlt" value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} maxLength={200} placeholder="Describe the picture for screen readers" />
+                <p className="mt-1 text-xs text-ink-3">Saved with the post — press Save changes.</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -249,7 +274,7 @@ export function PostForm({
           {post && (
             <div className="flex items-center gap-2">
               {post.status !== "published" && (
-                <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="h-9 w-auto" aria-label="Schedule publish for (optional)" />
+                <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="h-9 w-auto" aria-label="Schedule publish for, IST (optional)" title="Schedule for a date and time in IST — leave empty to publish now" />
               )}
               <Button type="button" variant={post.status === "published" ? "outline" : "gradient"} disabled={pending} onClick={handlePublishToggle}>
                 {post.status === "published" ? "Unpublish" : scheduleAt ? "Schedule" : "Publish now"}

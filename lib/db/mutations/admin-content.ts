@@ -1,6 +1,7 @@
 import "server-only";
 
 import { eq } from "drizzle-orm";
+import { deleteObject, listImageFamily } from "@/lib/storage/storage";
 import { db } from "../index";
 import { pages, posts } from "../schema";
 import type { TiptapDoc } from "@/lib/content/tiptap-schema";
@@ -12,6 +13,7 @@ export interface PostInput {
   excerpt: string | null;
   body: TiptapDoc;
   coverStorageKey: string | null;
+  coverAlt: string | null;
   author: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -68,4 +70,28 @@ export async function publishPageDb(id: number): Promise<void> {
 
 export async function unpublishPageDb(id: number): Promise<void> {
   await db.update(pages).set({ status: "draft", updatedAt: new Date() }).where(eq(pages.id, id));
+}
+
+async function deleteImageFiles(storageKey: string | null): Promise<void> {
+  if (!storageKey) return;
+  const family = await listImageFamily(storageKey).catch(() => [storageKey]);
+  for (const key of family) await deleteObject(key).catch(() => {});
+}
+
+/** Deletes a post for good, with its cover image files. Returns what the caller needs to refresh. */
+export async function deletePostDb(id: number): Promise<{ slug: string; kind: "blog" | "recipe" } | null> {
+  const [row] = await db.delete(posts).where(eq(posts.id, id)).returning({ slug: posts.slug, kind: posts.kind, coverStorageKey: posts.coverStorageKey });
+  if (!row) return null;
+  await deleteImageFiles(row.coverStorageKey);
+  return { slug: row.slug, kind: row.kind };
+}
+
+/** When a cover is replaced or removed, its old files go (posts don't share cover files). */
+export async function deleteReplacedCoverFiles(storageKey: string | null): Promise<void> {
+  await deleteImageFiles(storageKey);
+}
+
+export async function deletePageDb(id: number): Promise<{ slug: string } | null> {
+  const [row] = await db.delete(pages).where(eq(pages.id, id)).returning({ slug: pages.slug });
+  return row ?? null;
 }

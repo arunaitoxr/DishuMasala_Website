@@ -45,13 +45,20 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Admin
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return resolve(null);
+        // Every failure is shown — an inline-image upload used to fail silently here.
+        const fail = (message: string) => {
+          setError(message);
+          resolve(null);
+        };
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return fail("Only JPEG, PNG or WEBP images are allowed.");
+        if (file.size > 5 * 1024 * 1024) return fail("File is larger than 5MB.");
         const effectiveSlug = slug || autoSlug(title) || "untitled";
         const presign = await presignContentImageUploadAction({ slug: effectiveSlug, contentType: file.type as "image/jpeg" | "image/png" | "image/webp", contentLength: file.size });
-        if (!presign.ok || !presign.data) return resolve(null);
+        if (!presign.ok || !presign.data) return fail(presign.ok ? "Upload failed." : presign.error);
         const putRes = await fetch(presign.data.url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-        if (!putRes.ok) return resolve(null);
+        if (!putRes.ok) return fail("Upload to storage failed.");
         const finalize = await finalizeContentImageUploadAction({ slug: effectiveSlug, tmpKey: presign.data.tmpKey });
-        if (!finalize.ok || !finalize.data) return resolve(null);
+        if (!finalize.ok || !finalize.data) return fail(finalize.ok ? "Processing failed." : finalize.error);
         const alt = window.prompt("Alt text for this image") ?? "";
         resolve({ url: finalize.data.url, alt });
       };

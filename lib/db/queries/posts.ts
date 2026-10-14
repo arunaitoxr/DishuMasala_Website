@@ -13,6 +13,7 @@ export interface PostSummary {
   title: string;
   excerpt: string | null;
   coverUrl: string | null;
+  coverAlt: string | null;
   author: string | null;
   publishedAt: Date;
 }
@@ -25,7 +26,7 @@ async function fetchPublishedPosts(kind?: "blog" | "recipe"): Promise<PostSummar
   if (kind) conditions.push(eq(posts.kind, kind));
 
   const rows = await db
-    .select({ id: posts.id, slug: posts.slug, kind: posts.kind, title: posts.title, excerpt: posts.excerpt, coverStorageKey: posts.coverStorageKey, author: posts.author, publishedAt: posts.publishedAt })
+    .select({ id: posts.id, slug: posts.slug, kind: posts.kind, title: posts.title, excerpt: posts.excerpt, coverStorageKey: posts.coverStorageKey, coverAlt: posts.coverAlt, author: posts.author, publishedAt: posts.publishedAt })
     .from(posts)
     .where(and(...conditions))
     .orderBy(desc(posts.publishedAt));
@@ -38,6 +39,7 @@ async function fetchPublishedPosts(kind?: "blog" | "recipe"): Promise<PostSummar
     title: r.title,
     excerpt: r.excerpt,
     coverUrl: r.coverStorageKey ? publicUrl(r.coverStorageKey) : null,
+    coverAlt: r.coverAlt,
     author: r.author,
     publishedAt: r.publishedAt!,
   }));
@@ -51,7 +53,9 @@ function revivePublishedAt<T extends { publishedAt: Date }>(post: T): T {
 }
 
 export async function getPublishedPosts(kind?: "blog" | "recipe"): Promise<PostSummary[]> {
-  const posts = await unstable_cache(() => fetchPublishedPosts(kind), ["published-posts", kind ?? "all"], { tags: ["posts"] })();
+  // `revalidate: 60` — the query filters `published_at <= now()`, so a scheduled post would otherwise
+  // stay hidden until some unrelated edit cleared the `posts` tag; now it goes live within a minute.
+  const posts = await unstable_cache(() => fetchPublishedPosts(kind), ["published-posts", kind ?? "all"], { tags: ["posts"], revalidate: 60 })();
   return posts.map(revivePublishedAt);
 }
 
@@ -78,6 +82,7 @@ async function fetchPublishedPostBySlug(slug: string, kind: "blog" | "recipe"): 
     title: row.title,
     excerpt: row.excerpt,
     coverUrl: row.coverStorageKey ? publicUrl(row.coverStorageKey) : null,
+    coverAlt: row.coverAlt,
     author: row.author,
     publishedAt: row.publishedAt!,
     body: parseTiptapDoc(row.body),
@@ -90,6 +95,7 @@ async function fetchPublishedPostBySlug(slug: string, kind: "blog" | "recipe"): 
 export async function getPublishedPostBySlug(slug: string, kind: "blog" | "recipe"): Promise<PostDetail | null> {
   const post = await unstable_cache(() => fetchPublishedPostBySlug(slug, kind), ["published-post", kind, slug], {
     tags: ["posts", `post:${slug}`],
+    revalidate: 60, // a scheduled post goes live within a minute (see getPublishedPosts)
   })();
   return post && revivePublishedAt(post);
 }

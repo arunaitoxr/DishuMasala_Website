@@ -15,12 +15,16 @@ import {
   updatePageDb,
   publishPageDb,
   unpublishPageDb,
+  deletePostDb,
+  deletePageDb,
+  deleteReplacedCoverFiles,
   type PostInput,
   type PageInput,
 } from "@/lib/db/mutations/admin-content";
 import { isPostSlugTaken, isPageSlugTaken, getAdminPostById, getAdminPageById } from "@/lib/db/queries/admin-content";
 import { presignContentImageUpload, finalizeContentImageUpload } from "@/lib/storage/admin-upload";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, fromISTDateTimeLocal } from "@/lib/dates";
+import { isRequiredPageSlug, isReservedRouteSlug } from "@/lib/content/page-slugs";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
 
@@ -51,6 +55,7 @@ const postSchema = z.object({
   excerpt: z.string().trim().max(400).nullable(),
   body: tiptapDocSchema,
   coverStorageKey: z.string().trim().nullable(),
+  coverAlt: z.string().trim().max(200).nullable(),
   author: z.string().trim().max(100).nullable(),
   seoTitle: z.string().trim().max(70).nullable(),
   seoDescription: z.string().trim().max(200).nullable(),
@@ -65,6 +70,7 @@ function toPostDbInput(parsed: z.infer<typeof postSchema>): PostInput {
     excerpt: parsed.excerpt || null,
     body: parsed.body,
     coverStorageKey: parsed.coverStorageKey || null,
+    coverAlt: parsed.coverAlt || null,
     author: parsed.author || null,
     seoTitle: parsed.seoTitle || null,
     seoDescription: parsed.seoDescription || null,
@@ -104,6 +110,8 @@ export async function updatePostAction(id: number, input: z.infer<typeof postSch
 
   const dbInput = toPostDbInput(parsed.data);
   await updatePostDb(id, dbInput);
+  // A replaced or removed cover leaves its old files behind otherwise.
+  if (existing.coverStorageKey && existing.coverStorageKey !== dbInput.coverStorageKey) await deleteReplacedCoverFiles(existing.coverStorageKey);
   await writeAuditLog({ actorUserId: auth.user.id, action: "post.update", entity: "post", entityId: id, diff: { slug: dbInput.slug, title: dbInput.title } });
   revalidateContent(existing.slug, existing.kind);
   if (existing.slug !== dbInput.slug) revalidateContent(dbInput.slug, dbInput.kind);
@@ -121,7 +129,9 @@ export async function publishPostAction(input: z.infer<typeof publishSchema>): P
   const existing = await getAdminPostById(parsed.data.id);
   if (!existing) return { ok: false, error: "Post not found." };
 
-  const publishedAt = parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : null;
+  // The schedule box is typed in IST; read it as IST on any server timezone (it used to land 5½ hours late).
+  const publishedAt = parsed.data.publishedAt ? fromISTDateTimeLocal(parsed.data.publishedAt) : null;
+  if (parsed.data.publishedAt && !publishedAt) return { ok: false, error: "The schedule date isn't valid." };
   const result = await publishPostDb(parsed.data.id, publishedAt);
   if (!result.ok) return { ok: false, error: result.error };
 
@@ -140,6 +150,20 @@ export async function unpublishPostAction(id: number): Promise<AdminResult> {
   await writeAuditLog({ actorUserId: auth.user.id, action: "post.unpublish", entity: "post", entityId: id, diff: { slug: existing.slug } });
   revalidateContent(existing.slug, existing.kind);
   return { ok: true, message: "Moved back to draft." };
+}
+
+/** Deletes a post for good, with its cover image (typed confirmation of the slug). */
+export async function deletePostAction(id: number, confirmSlug: string): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const existing = await getAdminPostById(id);
+  if (!existing) return { ok: false, error: "Post not found." };
+  if (confirmSlug.trim() !== existing.slug) return { ok: false, error: `Type ${existing.slug} exactly to confirm.` };
+  const deleted = await deletePostDb(id);
+  if (!deleted) return { ok: false, error: "Post not found." };
+  await writeAuditLog({ actorUserId: auth.user.id, action: "post.delete", entity: "post", entityId: id, diff: { slug: existing.slug, title: existing.title } });
+  revalidateContent(deleted.slug, deleted.kind);
+  return { ok: true, message: "Post deleted." };
 }
 
 // -------------------------------------------------------------------------------------------
@@ -164,10 +188,12 @@ export async function createPageAction(input: z.infer<typeof pageSchema>): Promi
   const parsed = pageSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   if (await isPageSlugTaken(parsed.data.slug)) return { ok: false, error: `The slug "${parsed.data.slug}" is already used.` };
+  if (isReservedRouteSlug(parsed.data.slug)) return { ok: false, error: `/${parsed.data.slug} is already a page of the site — choose another slug.` };
 
   const dbInput: PageInput = parsed.data;
   const id = await createPageDb(dbInput);
   await writeAuditLog({ actorUserId: auth.user.id, action: "page.create", entity: "page", entityId: id, diff: { slug: dbInput.slug } });
+  updateTag("pages");
   revalidatePath("/admin/content");
   return { ok: true, message: "Page created as a draft.", data: { id } };
 }
@@ -181,6 +207,10 @@ export async function updatePageAction(id: number, input: z.infer<typeof pageSch
   const existing = await getAdminPageById(id);
   if (!existing) return { ok: false, error: "Page not found." };
   if (await isPageSlugTaken(parsed.data.slug, id)) return { ok: false, error: `The slug "${parsed.data.slug}" is already used.` };
+  if (existing.slug !== parsed.data.slug) {
+    if (isRequiredPageSlug(existing.slug)) return { ok: false, error: `The ${existing.slug} page's address can't change — the site links to /${existing.slug}.` };
+    if (isReservedRouteSlug(parsed.data.slug)) return { ok: false, error: `/${parsed.data.slug} is already a page of the site — choose another slug.` };
+  }
 
   await updatePageDb(id, parsed.data);
   await writeAuditLog({ actorUserId: auth.user.id, action: "page.update", entity: "page", entityId: id, diff: { slug: parsed.data.slug } });
@@ -217,6 +247,24 @@ export async function unpublishPageAction(id: number): Promise<AdminResult> {
   return { ok: true, message: "Moved back to draft." };
 }
 
+/** Deletes a page for good (typed confirmation of the slug). The legal pages the site links to can be
+ * edited or unpublished, never deleted. */
+export async function deletePageAction(id: number, confirmSlug: string): Promise<AdminResult> {
+  const auth = await requireStaff();
+  if (!auth.ok) return auth;
+  const existing = await getAdminPageById(id);
+  if (!existing) return { ok: false, error: "Page not found." };
+  if (isRequiredPageSlug(existing.slug)) return { ok: false, error: `The ${existing.title} page is linked from every page of the site — edit or unpublish it instead.` };
+  if (confirmSlug.trim() !== existing.slug) return { ok: false, error: `Type ${existing.slug} exactly to confirm.` };
+  await deletePageDb(id);
+  await writeAuditLog({ actorUserId: auth.user.id, action: "page.delete", entity: "page", entityId: id, diff: { slug: existing.slug, title: existing.title } });
+  updateTag(`page:${existing.slug}`);
+  updateTag("pages");
+  revalidatePath(`/${existing.slug}`);
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Page deleted." };
+}
+
 // -------------------------------------------------------------------------------------------
 // Content images (post cover + inline body images) — same storage flow as products
 // -------------------------------------------------------------------------------------------
@@ -245,6 +293,7 @@ export async function finalizeContentImageUploadAction(input: z.infer<typeof fin
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   try {
     const result = await finalizeContentImageUpload("posts", parsed.data.slug, parsed.data.tmpKey);
+    await writeAuditLog({ actorUserId: auth.user.id, action: "content.image_upload", entity: "post", entityId: parsed.data.slug, diff: { storageKey: result.storageKey } });
     return { ok: true, message: "Image uploaded.", data: result };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Upload processing failed." };
