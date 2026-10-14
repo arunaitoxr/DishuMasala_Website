@@ -14,7 +14,7 @@ import { fromISTDateTimeLocal } from "@/lib/dates";
 import { requireStaffOrAdmin } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit";
 import { createCouponDb, deleteCouponDb, updateCouponDb, type CouponInput } from "@/lib/db/mutations/admin-coupons";
-import { isCouponCodeTaken, getAdminCouponById } from "@/lib/db/queries/admin-coupons";
+import { isCouponCodeTaken, getAdminCouponById, isCouponCodeOnOrders } from "@/lib/db/queries/admin-coupons";
 
 export type AdminResult<T = undefined> = { ok: true; message: string; data?: T } | { ok: false; error: string };
 
@@ -32,13 +32,16 @@ const couponSchema = z
     kind: z.enum(["percent", "fixed"]),
     // Percent: a whole number 1–100. Fixed: rupees (paise allowed), stored as paise like every other
     // money column — it used to be stored as the bare rupee number, so "₹100 off" took ₹1 off.
-    value: z.coerce.number().positive("Enter a discount greater than 0"),
-    minSpendRupees: z.coerce.number().min(0, "Minimum spend can't be negative").nullable(),
-    // The "upper limit": however large the percentage, the discount never exceeds this.
-    maxDiscountRupees: z.coerce.number().positive("The maximum discount must be more than ₹0").nullable(),
+    // Money fields are capped well inside the integer paise columns (₹10 lakh), so a typo gets a
+    // message instead of a database error.
+    value: z.coerce.number().positive("Enter a discount greater than 0").max(1_000_000, "That discount is too large"),
+    minSpendRupees: z.coerce.number().min(0, "Minimum spend can't be negative").max(1_000_000, "That minimum spend is too large").nullable(),
+    // The "upper limit": however large the percentage, the discount never exceeds this. Only a
+    // percent coupon uses it (checked below) — a fixed coupon's hidden field is ignored.
+    maxDiscountRupees: z.coerce.number().min(0).max(1_000_000, "That maximum discount is too large").nullable(),
     firstOrderOnly: z.boolean(),
-    usageLimit: z.coerce.number().int().positive().nullable(),
-    perUserLimit: z.coerce.number().int().positive().nullable(),
+    usageLimit: z.coerce.number().int().positive().max(1_000_000).nullable(),
+    perUserLimit: z.coerce.number().int().positive().max(1_000_000).nullable(),
     startsAt: z.string().nullable(),
     endsAt: z.string().nullable(),
     active: z.boolean(),
@@ -48,6 +51,10 @@ const couponSchema = z
   .refine((v) => v.kind !== "percent" || (Number.isInteger(v.value) && v.value <= 100), {
     message: "A percent coupon must be a whole number from 1 to 100",
     path: ["value"],
+  })
+  .refine((v) => v.kind !== "percent" || v.maxDiscountRupees == null || v.maxDiscountRupees > 0, {
+    message: "The maximum discount must be more than ₹0",
+    path: ["maxDiscountRupees"],
   })
   .refine((v) => v.kind !== "fixed" || Math.abs(v.value * 100 - Math.round(v.value * 100)) < 1e-6, {
     message: "Enter the amount in rupees, at most two decimal places",
@@ -123,6 +130,11 @@ export async function updateCouponAction(id: number, input: z.infer<typeof coupo
 
   if (await isCouponCodeTaken(parsed.data.code, id)) {
     return { ok: false, error: `The code "${parsed.data.code.toUpperCase()}" is already in use.` };
+  }
+  // Usage limits and the coupon's order list match orders by the code text — renaming a used
+  // coupon would reset everyone's count. Create a new coupon instead.
+  if (parsed.data.code.toUpperCase() !== existing.code && (existing.usedCount > 0 || (await isCouponCodeOnOrders(existing.code)))) {
+    return { ok: false, error: `${existing.code} has already been used on orders, so its code can't change. Create a new coupon for the new code.` };
   }
 
   const dbInput = toDbInput(parsed.data);

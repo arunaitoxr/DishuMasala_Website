@@ -33,6 +33,7 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
   const initialApplies = parseAppliesTo(coupon?.appliesTo);
 
   const [code, setCode] = useState(coupon?.code ?? "");
+  const codeLocked = mode === "edit" && (coupon?.usedCount ?? 0) > 0;
   const [kind, setKind] = useState<"percent" | "fixed">(coupon?.kind ?? "percent");
   const [value, setValue] = useState(coupon ? (coupon.kind === "fixed" ? coupon.value / 100 : coupon.value) : 5);
   const [minSpendRupees, setMinSpendRupees] = useState(coupon?.minSpendPaise != null ? coupon.minSpendPaise / 100 : "");
@@ -107,7 +108,20 @@ export function CouponForm({ mode, coupon, picker }: { mode: "create" | "edit"; 
         </p>
         <div>
           <label htmlFor="code" className="mb-1 block text-sm font-medium text-ink">Code</label>
-          <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onBlur={handleCodeBlur} className="font-mono" />
+          <Input
+            id="code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onBlur={handleCodeBlur}
+            readOnly={codeLocked}
+            aria-describedby={codeLocked ? "code-hint" : undefined}
+            className="font-mono"
+          />
+          {codeLocked && (
+            <p id="code-hint" className="mt-1 text-xs text-ink-3">
+              This code has been used on orders, so it can&apos;t be renamed. Create a new coupon for a new code.
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

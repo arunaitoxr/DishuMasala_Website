@@ -70,3 +70,10 @@ export async function listProductsAndCollectionsForPicker() {
   ]);
   return { products: productRows, collections: collectionRows };
 }
+
+/** Whether any order (paid or not) was placed with this code. Usage limits and the coupon's order
+ * list match orders by the code text, so a code that has been used can't be renamed. */
+export async function isCouponCodeOnOrders(code: string): Promise<boolean> {
+  const [row] = await db.select({ id: orders.id }).from(orders).where(eq(orders.couponCode, code.toUpperCase())).limit(1);
+  return !!row;
+}
