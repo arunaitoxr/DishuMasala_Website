@@ -97,9 +97,13 @@ function renderNode(node: TiptapNode, key: number): ReactNode {
       const src = typeof node.attrs?.src === "string" ? node.attrs.src : null;
       if (!src) return null;
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
+      // Images uploaded in the editor live in our Supabase Storage bucket, which next/image may
+      // optimise. One pasted in from another website isn't an allowed image host: shown as-is
+      // rather than as a broken image (or an error in development).
+      const ownStorage = src.includes("/storage/v1/object/public/");
       return (
         <span key={key} className="mb-4 block overflow-hidden rounded-lg border border-line bg-surface-2">
-          <Image src={src} alt={alt} width={1200} height={800} sizes="(max-width: 768px) 100vw, 800px" className="h-auto w-full" />
+          <Image src={src} alt={alt} width={1200} height={800} sizes="(max-width: 768px) 100vw, 800px" unoptimized={!ownStorage} className="h-auto w-full" />
         </span>
       );
     }

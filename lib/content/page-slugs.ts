@@ -6,8 +6,11 @@
  *   deleted, or those links would break.
  * - Any other published page is served at `/<slug>` by app/[slug]/page.tsx.
  * - `RESERVED_ROUTE_SLUGS` are the site's own top-level routes; a page can't take one of those names,
- *   because the existing route would always win and the page would never be shown.
+ *   because the existing route would always win and the page would never be shown. The same goes for
+ *   the old site's addresses that middleware 301s elsewhere (`/faqs`, `/about-us`, …).
  */
+import { LEGACY_REDIRECTS } from "@/lib/seo/redirects.generated";
+
 export const REQUIRED_PAGE_SLUGS = ["privacy", "terms", "refund-policy", "shipping-policy"] as const;
 
 export const RESERVED_ROUTE_SLUGS = [
@@ -22,5 +25,5 @@ export function isRequiredPageSlug(slug: string): boolean {
 }
 
 export function isReservedRouteSlug(slug: string): boolean {
-  return RESERVED_ROUTE_SLUGS.includes(slug);
+  return RESERVED_ROUTE_SLUGS.includes(slug) || `/${slug}` in LEGACY_REDIRECTS;
 }

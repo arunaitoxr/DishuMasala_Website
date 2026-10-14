@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { getAllPublishedProductSlugs } from "@/lib/db/queries/product-detail";
 import { getAllCollectionSlugs } from "@/lib/db/queries/collections";
 import { getPublishedPosts } from "@/lib/db/queries/posts";
+import { getPublishedPageSlugs } from "@/lib/db/queries/pages";
+import { isRequiredPageSlug, isReservedRouteSlug } from "@/lib/content/page-slugs";
 
 /**
  * The sitemap, built from the database rather than a static list (CLAUDE.md §10). A generated
@@ -18,10 +20,11 @@ const BASE = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").repla
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [productSlugs, collectionSlugs, posts] = await Promise.all([
+  const [productSlugs, collectionSlugs, posts, pages] = await Promise.all([
     getAllPublishedProductSlugs(),
     getAllCollectionSlugs(),
     getPublishedPosts(),
+    getPublishedPageSlugs(),
   ]);
 
   const now = new Date();
@@ -60,5 +63,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
-  return [...staticEntries, ...collectionEntries, ...productEntries, ...postEntries];
+  // Pages created in the admin, served at /<slug> by app/[slug] (the legal pages are listed above).
+  const pageEntries: MetadataRoute.Sitemap = pages
+    .filter((p) => !isRequiredPageSlug(p.slug) && !isReservedRouteSlug(p.slug))
+    .map((p) => ({ url: `${BASE}/${p.slug}`, lastModified: p.updatedAt, changeFrequency: "monthly", priority: 0.3 }));
+
+  return [...staticEntries, ...collectionEntries, ...productEntries, ...postEntries, ...pageEntries];
 }

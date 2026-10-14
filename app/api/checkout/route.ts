@@ -7,7 +7,8 @@ import { createOrderTransaction, attachRazorpayOrderId, markOrderPaymentFailed }
 import { getOrderByIdempotencyKey, getOrderById } from "@/lib/db/queries/orders";
 import { getRazorpayClient } from "@/lib/razorpay/client";
 import { buildOrderConfirmationUrl } from "@/lib/order-token";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser, requireStaffOrAdmin } from "@/lib/auth/session";
+import { getMaintenanceMode } from "@/lib/db/queries/settings";
 
 function confirmationUrlFor(orderNumber: string, email: string): string {
   return buildOrderConfirmationUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000", orderNumber, email);
@@ -62,6 +63,7 @@ type CheckoutError =
   | { code: "cart_changed"; message: string; correctedCart: Awaited<ReturnType<typeof computePricing>> }
   | { code: "empty_cart"; message: string }
   | { code: "payment_unavailable"; message: string }
+  | { code: "shop_closed"; message: string }
   | { code: "internal_error"; message: string };
 
 function errorResponse(status: number, error: CheckoutError): NextResponse {
@@ -69,6 +71,12 @@ function errorResponse(status: number, error: CheckoutError): NextResponse {
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
+  // Maintenance mode closes the shop for real, not just its pages: a tab opened before it was
+  // switched on (or a direct API call) can't place an order. Staff can still test checkout.
+  if ((await getMaintenanceMode()) && !(await requireStaffOrAdmin()).ok) {
+    return errorResponse(503, { code: "shop_closed", message: "The shop is closed for maintenance right now — please try again a little later." });
+  }
+
   let body: unknown;
   try {
     body = await req.json();

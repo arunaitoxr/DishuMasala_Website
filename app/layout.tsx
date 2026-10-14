@@ -83,6 +83,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const exempt = MAINTENANCE_EXEMPT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const staffViewer = maintenanceMode ? (await requireStaffOrAdmin()).ok : false;
   const shopClosed = maintenanceMode && !staffViewer && !exempt;
+  // The sign-in pages stay reachable but without the shop's header and footer: the root layout isn't
+  // re-rendered on client-side navigation, so a shop link followed from /login would open the shop.
+  const shopChrome = !(maintenanceMode && !staffViewer);
 
   // Site-wide Organization schema (CLAUDE.md §10) — built only from real settings rows, never an
   // invented address, phone or logo. `sameAs` is omitted entirely: Footer.tsx's own comment
@@ -140,11 +143,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <MaintenanceNotice branding={branding} storeAddress={storeAddress} whatsappNumber={whatsappNumber} />
               ) : (
                 <>
-                  <Header />
+                  {shopChrome && <Header />}
                   <main id="main-content" className="flex-1">
                     {children}
                   </main>
-                  <Footer />
+                  {shopChrome && <Footer />}
                 </>
               )}
               <CartDrawer upsells={<CartUpsells />} />

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { subscribeNewsletter } from "@/lib/db/mutations/marketing";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/rate-limit";
 
 /**
  * Submission target for components/layout/NewsletterForm.tsx. The footer box used to show "you're on
@@ -24,6 +25,8 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
+  const { allowed } = await checkRateLimit("newsletter", { ip: clientIpFromHeaders(req.headers) });
+  if (!allowed) return NextResponse.json({ ok: false, error: "Too many sign-ups from here — please try again later." }, { status: 429 });
   await subscribeNewsletter(parsed.data.email, parsed.data.sourcePath ? `footer:${parsed.data.sourcePath}` : "footer");
   return NextResponse.json({ ok: true });
 }

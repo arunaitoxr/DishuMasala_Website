@@ -23,3 +23,8 @@ async function fetchPublishedPageBySlug(slug: string): Promise<PageDetail | null
 export async function getPublishedPageBySlug(slug: string): Promise<PageDetail | null> {
   return unstable_cache(() => fetchPublishedPageBySlug(slug), ["published-page", slug], { tags: ["pages", `page:${slug}`] })();
 }
+
+/** Slugs of every published page, for the sitemap. Uncached: the sitemap itself revalidates hourly. */
+export async function getPublishedPageSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db.select({ slug: pages.slug, updatedAt: pages.updatedAt }).from(pages).where(eq(pages.status, "published"));
+}
