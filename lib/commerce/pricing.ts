@@ -18,6 +18,9 @@ import type { VariantPricingRow } from "@/lib/db/queries/variants";
 import type { CouponRow } from "@/lib/db/queries/coupons";
 import { TEA_COLLECTION_SLUGS, MASALA_COLLECTION_SLUGS } from "@/lib/nav";
 
+
+/** Razorpay's minimum order amount (₹1). */
+export const MIN_PAYABLE_PAISE = 100;
 export interface PricingLineInput {
   variantId: number;
   qty: number;
@@ -458,7 +461,11 @@ export async function computePricing(input: PricingInput, deps: PricingDeps): Pr
   const crossPillarApplied = crossPillarDiscountPaise > 0;
   // A large coupon plus the cross-pillar discount must never take the goods below ₹0 (checkout
   // rejects a negative total), so the coupon gives way to whatever the bundle discount already took.
-  discountPaise = paise(Math.min(discountPaise, subtotalPaise - crossPillarDiscountPaise));
+  // Nor may it bring the order to ₹0: Razorpay's smallest payment is ₹1, so a 100% coupon (or a
+  // fixed one worth the whole cart) leaves ₹1 to pay rather than an order that can never be paid.
+  const goodsAfterBundlePaise = subtotalPaise - crossPillarDiscountPaise;
+  const maxCouponPaise = Math.max(0, Math.min(goodsAfterBundlePaise, goodsAfterBundlePaise + shippingPaise - MIN_PAYABLE_PAISE));
+  discountPaise = paise(Math.min(discountPaise, maxCouponPaise));
 
   const totalPaise = paise(subtotalPaise - discountPaise - crossPillarDiscountPaise + shippingPaise);
 

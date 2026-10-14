@@ -48,7 +48,10 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const order = await getOrderByRazorpayOrderId(razorpayOrderId);
     if (!order) {
-      console.warn(`[razorpay webhook] no order found for razorpay_order_id=${razorpayOrderId}`);
+      // A captured payment with no order means money taken with nothing to ship — it must be
+      // refunded by hand from the Razorpay dashboard, so log it loudly enough to find.
+      const log = event === "payment.captured" ? console.error : console.warn;
+      log(`[razorpay webhook] ${event} for unknown razorpay_order_id=${razorpayOrderId} payment=${razorpayPaymentId}${event === "payment.captured" ? " — CAPTURED WITH NO ORDER, refund it in Razorpay" : ""}`);
       return NextResponse.json({ ok: true, ignored: "order_not_found" });
     }
 

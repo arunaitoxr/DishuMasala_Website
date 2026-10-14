@@ -167,12 +167,17 @@ export async function attachRazorpayOrderId(orderId: number, razorpayOrderId: st
 export type MarkPaidResult = { ok: true; alreadyPaid: boolean } | { ok: false; error: "not_found" | "payment_id_conflict" };
 
 /**
- * Marks an order paid — a compare-and-set UPDATE guarded by `payment_status <> 'paid'`, so this
- * function is safe to call twice (or concurrently) for the same order: whichever caller — the
- * client-side verify route or the async webhook — gets there first performs the transition; the
- * other sees `alreadyPaid: true` and does nothing further. This is exactly the "arrives before,
- * after, or interleaved with the client callback" race CLAUDE.md §7.5 calls out, handled without
- * an explicit lock by relying on Postgres's own row-level atomicity for the single UPDATE.
+ * Marks an order paid. The order row is locked first, so this function is safe to call twice (or
+ * concurrently) for the same order: whichever caller — the client-side verify route or the async
+ * webhook — gets there first performs the transition; the other sees `alreadyPaid: true` and does
+ * nothing further. This is exactly the "arrives before, after, or interleaved with the client
+ * callback" race CLAUDE.md §7.5 calls out.
+ *
+ * Only a `pending` or `failed` payment can become paid. A `refunded` order is never revived — a
+ * replayed verify call (its signature stays valid forever) or a late `payment.captured` webhook
+ * would otherwise re-confirm it, re-send the confirmation and push it to Shiprocket again. A
+ * `failed` order had its stock released by `markOrderPaymentFailed`; a successful retry inside the
+ * same Razorpay order takes that stock again here.
  *
  * The same transition is where a coupon use is counted — once, by whichever caller wins — so
  * `coupons.used_count` is the number of paid orders that used the code. Signed-in shoppers also get
@@ -182,31 +187,43 @@ export type MarkPaidResult = { ok: true; alreadyPaid: boolean } | { ok: false; e
 export async function markOrderPaid(orderId: number, razorpayPaymentId: string): Promise<MarkPaidResult> {
   try {
     return await db.transaction(async (tx) => {
-      const updated = await tx
+      const [current] = await tx
+        .select({ paymentStatus: orders.paymentStatus, couponCode: orders.couponCode, userId: orders.userId })
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .for("update");
+      if (!current) return { ok: false as const, error: "not_found" as const };
+      // Already paid (by the other racing caller), or refunded — a no-op, not an error.
+      if (current.paymentStatus !== "pending" && current.paymentStatus !== "failed") return { ok: true as const, alreadyPaid: true };
+
+      await tx
         .update(orders)
         .set({ status: "confirmed", paymentStatus: "paid", razorpayPaymentId, updatedAt: new Date() })
-        .where(and(eq(orders.id, orderId), sql`${orders.paymentStatus} <> 'paid'`))
-        .returning({ id: orders.id, couponCode: orders.couponCode, userId: orders.userId });
+        .where(eq(orders.id, orderId));
 
-      if (updated.length > 0) {
-        const { couponCode, userId } = updated[0];
-        if (couponCode) {
-          const [couponRow] = await tx
-            .update(coupons)
-            .set({ usedCount: sql`${coupons.usedCount} + 1` })
-            .where(eq(coupons.code, couponCode))
-            .returning({ id: coupons.id });
-          if (couponRow && userId != null) {
-            await tx.insert(couponRedemptions).values({ couponId: couponRow.id, orderId, userId });
-          }
-        }
-        return { ok: true as const, alreadyPaid: false };
+      if (current.paymentStatus === "failed") {
+        // Paid after all — the goods ship, so the count goes down even if it overshoots (floored at
+        // zero, never negative; staff see the variant out of stock).
+        await tx.execute(sql`
+          UPDATE ${variants}
+          SET stock_qty = GREATEST(${variants}.stock_qty - oi.qty, 0), in_stock = ${variants}.stock_qty - oi.qty > 0
+          FROM ${orderItems} oi
+          WHERE ${variants}.id = oi.variant_id AND oi.order_id = ${orderId} AND ${variants}.stock_qty IS NOT NULL
+        `);
       }
 
-      const [existing] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, orderId)).limit(1);
-      if (!existing) return { ok: false as const, error: "not_found" as const };
-      // Already paid (by the other racing caller) — idempotent no-op, not an error.
-      return { ok: true as const, alreadyPaid: true };
+      const { couponCode, userId } = current;
+      if (couponCode) {
+        const [couponRow] = await tx
+          .update(coupons)
+          .set({ usedCount: sql`${coupons.usedCount} + 1` })
+          .where(eq(coupons.code, couponCode))
+          .returning({ id: coupons.id });
+        if (couponRow && userId != null) {
+          await tx.insert(couponRedemptions).values({ couponId: couponRow.id, orderId, userId });
+        }
+      }
+      return { ok: true as const, alreadyPaid: false };
     });
   } catch (err) {
     if (isUniqueViolation(err)) {

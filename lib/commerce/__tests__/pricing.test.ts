@@ -304,15 +304,23 @@ describe("computePricing — automatic cross-pillar bundle discount", () => {
     expect(result.crossPillarApplied).toBe(false);
   });
 
-  it("never lets a coupon plus the cross-pillar discount take the goods below zero", async () => {
+  it("never lets a coupon plus the cross-pillar discount take the order below ₹1 (Razorpay's minimum)", async () => {
     const FULL: CouponRow = { ...WELCOME5, code: "FULL", firstOrderOnly: false, value: 100 };
     const result = await computePricing(
       { lines: [{ variantId: 1, qty: 1 }, { variantId: 4, qty: 1 }], couponCode: "FULL" },
       fakeDeps({ getCoupon: async () => FULL }),
     );
     expect(result.crossPillarDiscountPaise).toBe(1200);
-    expect(result.discountPaise).toBe(62000 - 1200);
-    expect(result.totalPaise).toBe(0);
+    expect(result.shippingPaise).toBe(0);
+    expect(result.discountPaise).toBe(62000 - 1200 - 100);
+    expect(result.totalPaise).toBe(100);
+  });
+
+  it("lets a 100% coupon take the goods to ₹0 when shipping is still payable", async () => {
+    const FULL: CouponRow = { ...WELCOME5, code: "FULL", firstOrderOnly: false, value: 100 };
+    const result = await computePricing({ lines: [{ variantId: 4, qty: 1 }], couponCode: "FULL" }, fakeDeps({ getCoupon: async () => FULL }));
+    expect(result.shippingPaise).toBeGreaterThan(0);
+    expect(result.totalPaise).toBe(result.shippingPaise);
   });
 
   it("caps a percent coupon at its upper limit (max discount)", async () => {
