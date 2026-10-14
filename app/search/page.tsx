@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { searchProducts } from "@/lib/db/queries/search";
@@ -77,9 +78,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               No products match &ldquo;{q}&rdquo;. Check the spelling, try a shorter or more general word, or
               browse everything instead.
             </p>
-            <a href="/shop/" className="text-sm font-semibold text-brew-2 underline underline-offset-4">
+            <Link href="/shop" className="text-sm font-semibold text-brew-2 underline underline-offset-4">
               Browse the full shop
-            </a>
+            </Link>
           </div>
         ) : (
           <>

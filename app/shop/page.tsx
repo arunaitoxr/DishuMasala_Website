@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { FilterRail } from "@/components/shop/FilterRail";
 import { FilterSheet } from "@/components/shop/FilterSheet";
@@ -104,7 +105,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                 or removing the collection filter.
               </p>
               <Button asChild variant="outline" size="md">
-                <a href="/shop/">Clear all filters</a>
+                <Link href="/shop">Clear all filters</Link>
               </Button>
             </div>
           ) : (
