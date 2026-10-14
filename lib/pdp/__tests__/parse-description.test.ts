@@ -43,9 +43,12 @@ describe("parseProductDescription", () => {
     expect(howToUse).toContain("Herbal Tea: Enjoy hot or iced");
   });
 
-  it("never surfaces Health Benefits content anywhere in its output", () => {
-    const parsed = parseProductDescription(BLUE_TEA_DESCRIPTION);
-    const serialized = JSON.stringify(parsed);
+  // Health Benefits is returned in its own field only (the PDP decides where it may be shown — see
+  // parse-description.ts's header); it must never leak into the other sections.
+  it("keeps Health Benefits in healthBenefits and out of every other field", () => {
+    const { healthBenefits, ...rest } = parseProductDescription(BLUE_TEA_DESCRIPTION);
+    expect(healthBenefits).toContain("Rich in Antioxidants");
+    const serialized = JSON.stringify(rest);
     expect(serialized).not.toContain("Rich in Antioxidants");
     expect(serialized).not.toContain("free radical");
   });
@@ -64,6 +67,7 @@ describe("parseProductDescription", () => {
       keyCharacteristics: null,
       ingredients: null,
       howToUse: null,
+      healthBenefits: null,
     });
   });
 });
