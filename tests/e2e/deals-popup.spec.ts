@@ -22,7 +22,7 @@ test("the deals scroller shows every other product, with every spice pack size",
   // Combo packs are offered too.
   expect(names.some((n) => /\+|Combo|Twin/i.test(n))).toBe(true);
 
-  // A spice appears twice — once per pack size, side by side.
+  // A spice appears twice — once per pack size, next to each other.
   const turmeric = cards.filter({ hasText: /Turmeric Powder/ }).filter({ hasNotText: /\+/ });
   await expect(turmeric).toHaveCount(2);
   await expect(turmeric.nth(0)).toContainText("100 gm");

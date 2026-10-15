@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { PriceBlock } from "@/components/ui/PriceBlock";
 import { Placeholder } from "@/components/media/Placeholder";
 import { PartyPopper } from "@/components/effects/PartyPopper";
+import { cn } from "@/lib/cn";
 import { dealShelf } from "@/lib/deals";
 import { formatINR, paise } from "@/lib/money";
 import { selectRupeesToFreeGiftPaise, useCartStore, type CartLine } from "@/lib/store/cart";
@@ -49,8 +50,9 @@ const QUIET_PATHS = ["/cart", "/checkout"];
  * (lib/deals.ts holds the client's table) — with a party-popper burst behind it. Each card is a real
  * product at its real price (and real saving, via PriceBlock) and pack size; one tap adds that pack —
  * the cheapest in stock, or for spices and spice combos, the size on the card (a card per size).
- * Since 2026-10-10 the cards are a left/right scroller holding every product not yet in the cart, the
- * client's table leading (`dealShelf`), under a line nudging toward the free gift (`GiftNudge`).
+ * Since 2026-10-10 the cards are a scroller holding every product not yet in the cart, the client's
+ * table leading (`dealShelf`), under a line nudging toward the free gift (`GiftNudge`); since 2026-10-15
+ * (client request) it scrolls up/down rather than left/right, so each card is a compact row.
  *
  * It replaces the cart drawer opening for that add (the store checks `dealsResolver`), and "View cart"
  * opens the drawer from here. Adds made from inside the popup skip the popup and the drawer. Prices
@@ -148,7 +150,7 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
         {open && <PartyPopper />}
         <DialogPrimitive.Content
           data-popup="deals"
-          className="fixed left-1/2 top-1/2 z-[51] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg bg-surface p-5 shadow-lift focus:outline-none data-[state=open]:animate-[dialog-in_200ms_cubic-bezier(.2,.6,.2,1)] sm:p-7"
+          className="fixed left-1/2 top-1/2 z-[51] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-lg bg-surface p-5 shadow-lift focus:outline-none data-[state=open]:animate-[dialog-in_200ms_cubic-bezier(.2,.6,.2,1)] sm:p-7"
         >
           <DialogTitle className="pr-8 font-display text-2xl font-semibold text-ink">
             <span aria-hidden="true">🎉 </span>Last minute add deals
@@ -160,11 +162,8 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
               const added = addedIds.has(deal.variant.id);
               const adding = addingId === deal.variant.id;
               return (
-                <li
-                  key={deal.variant.id}
-                  className="flex w-[46%] shrink-0 snap-start flex-col gap-2 rounded-lg border border-line bg-surface p-3 sm:w-[31%]"
-                >
-                  <div className="relative aspect-square w-full overflow-hidden rounded-md bg-surface-2">
+                <li key={deal.variant.id} className="flex gap-3 rounded-lg border border-line bg-surface p-3">
+                  <div className="relative size-24 shrink-0 overflow-hidden rounded-md bg-surface-2 sm:size-28">
                     {deal.image ? (
                       // eslint-disable-next-line @next/next/no-img-element -- small popup thumbnail from an already-resolved storage URL.
                       <img src={deal.image.url} alt={deal.image.alt} className="size-full object-cover" loading="lazy" />
@@ -260,79 +259,69 @@ function GiftNudge({ purchasedTitle, thresholdPaise }: { purchasedTitle: string;
 }
 
 /**
- * The deal cards as a horizontal scroller with prev/next arrows — the same native scroll, snap and
- * arrow treatment as ProductCarousel (whose cards are links rather than add buttons, so it isn't reused
- * directly). The arrows page by roughly one view and hide at each end, and both stay hidden when every
- * card already fits. Mounted with the dialog's content, so it measures a track that exists.
+ * The deal cards as a vertical scroller (client request, 2026-10-15; it was a left/right one): one
+ * column of rows on a phone, two on wider screens. It takes whatever height the dialog has left once the
+ * title, gift line and buttons are laid out (the dialog is a flex column), capped on wider screens so
+ * the popup never fills a desktop. An edge fades wherever more cards sit past it, and a "More deals"
+ * arrow pages down by roughly one view, hiding at the end — both stay off when every card already fits.
+ * Mounted with the dialog's content, so it measures a list that exists.
  */
 function DealShelf({ count, children }: { count: number; children: React.ReactNode }) {
-  const trackRef = useRef<HTMLUListElement>(null);
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
   useEffect(() => {
-    const el = trackRef.current;
+    const el = listRef.current;
     if (!el) return;
     const update = () => {
-      setCanScrollPrev(el.scrollLeft > 4);
-      setCanScrollNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+      setCanScrollUp(el.scrollTop > 4);
+      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
     };
     update();
     el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
+    // The list's height comes from the dialog's layout, so watch the list itself, not just the window.
+    const resize = new ResizeObserver(update);
+    resize.observe(el);
     return () => {
       el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      resize.disconnect();
     };
   }, [count]);
 
-  function scrollByView(direction: 1 | -1) {
-    const el = trackRef.current;
+  function scrollByView() {
+    const el = listRef.current;
     if (!el) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollBy({ left: el.clientWidth * 0.9 * direction, behavior: reduceMotion ? "auto" : "smooth" });
+    el.scrollBy({ top: el.clientHeight * 0.9, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
-  const arrow =
-    "absolute top-[30%] flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card disabled:pointer-events-none disabled:opacity-0";
-
   return (
-    <div className="relative mt-5 min-w-0">
+    <div className="relative mt-5 flex min-h-36 min-w-0 flex-auto flex-col sm:max-h-[26rem]">
       <ul
-        ref={trackRef}
+        ref={listRef}
         aria-label="Deals to add"
         tabIndex={0}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "grid min-h-0 flex-auto content-start gap-3 overflow-y-auto overscroll-contain [scrollbar-width:thin] sm:grid-cols-2",
+          canScrollUp && "mask-t-from-[calc(100%-2rem)]",
+          canScrollDown && "mask-b-from-[calc(100%-3rem)]",
+        )}
       >
         {children}
       </ul>
 
-      {(canScrollPrev || canScrollNext) && (
-        <>
-          <button
-            type="button"
-            aria-label="Previous deals"
-            disabled={!canScrollPrev}
-            onClick={() => scrollByView(-1)}
-            className={`${arrow} left-1`}
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="size-4" aria-hidden="true">
-              <path d="M12.5 15 7.5 10l5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="More deals"
-            disabled={!canScrollNext}
-            onClick={() => scrollByView(1)}
-            className={`${arrow} right-1`}
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="size-4" aria-hidden="true">
-              <path d="M7.5 15 12.5 10l-5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        aria-label="More deals"
+        disabled={!canScrollDown}
+        onClick={scrollByView}
+        className="absolute bottom-0 left-1/2 flex size-9 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card disabled:pointer-events-none disabled:opacity-0"
+      >
+        <svg viewBox="0 0 20 20" fill="none" className="size-4" aria-hidden="true">
+          <path d="M15 7.5 10 12.5 5 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }
