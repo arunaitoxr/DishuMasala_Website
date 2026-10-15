@@ -100,8 +100,8 @@ test.describe("Review submission validation", () => {
 
     await expect(page.getByText(/your review has been submitted/i)).toBeVisible();
 
+    // Pending until staff publish it: the product's published reviews show, this one doesn't.
     await page.reload();
     await expect(page.getByText("A genuinely detailed test review body for validation.")).toHaveCount(0);
-    await expect(page.getByText("No reviews yet.")).toBeVisible();
   });
 });
