@@ -22,10 +22,12 @@ export interface DealCandidate {
   name: string;
   href: string;
   image: { url: string; alt: string } | null;
-  /** The cheapest in-stock variant — what one tap on "Add" puts in the cart. */
+  /** The pack one tap on "Add" puts in the cart — the cheapest in-stock one, or, for a card per size
+   * (spices), that size. */
   variant: { id: number; sku: string; optionValue: string; mrpPaise: number; pricePaise: number };
-  /** How many in-stock variants the product has, to decide whether "From" is honest. */
-  variantCount: number;
+  /** The pack "Add to cart" puts in the cart, shown on the card ("200 gm") — it tells sizes of a spice
+   * apart, and the two "Classic Tea" products (100 gm / 500 gm packs) too. */
+  sizeLabel: string;
 }
 
 export interface AddDealsPopupProps {
@@ -45,7 +47,8 @@ const QUIET_PATHS = ["/cart", "/checkout"];
  * "Last minute add deals" (client brief, 2026-09-20): right after something is added to the cart, a
  * centred popup offers the other pillars — Blue Tea buyers see Red Tea / Spices / Black Tea, and so on
  * (lib/deals.ts holds the client's table) — with a party-popper burst behind it. Each card is a real
- * product at its real price (and real saving, via PriceBlock); one tap adds its cheapest in-stock pack.
+ * product at its real price (and real saving, via PriceBlock) and pack size; one tap adds that pack —
+ * the cheapest in stock, or for spices and spice combos, the size on the card (a card per size).
  * Since 2026-10-10 the cards are a left/right scroller holding every product not yet in the cart, the
  * client's table leading (`dealShelf`), under a line nudging toward the free gift (`GiftNudge`).
  *
@@ -62,6 +65,7 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
   const [open, setOpen] = useState(false);
   const [offered, setOffered] = useState<DealCandidate[]>([]);
   const [purchasedTitle, setPurchasedTitle] = useState("");
+  // Keyed by variant: a spice has a card per pack size, so one product can have two cards.
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
 
@@ -114,7 +118,7 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
   }, [offersFor, openCart]);
 
   async function add(deal: DealCandidate) {
-    setAddingId(deal.productId);
+    setAddingId(deal.variant.id);
     await addItem(
       {
         variantId: deal.variant.id,
@@ -131,7 +135,7 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
       { skipDeals: true },
     );
     setAddingId(null);
-    setAddedIds((prev) => new Set(prev).add(deal.productId));
+    setAddedIds((prev) => new Set(prev).add(deal.variant.id));
   }
 
   return (
@@ -153,11 +157,11 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
 
           <DealShelf count={offered.length}>
             {offered.map((deal) => {
-              const added = addedIds.has(deal.productId);
-              const adding = addingId === deal.productId;
+              const added = addedIds.has(deal.variant.id);
+              const adding = addingId === deal.variant.id;
               return (
                 <li
-                  key={deal.productId}
+                  key={deal.variant.id}
                   className="flex w-[46%] shrink-0 snap-start flex-col gap-2 rounded-lg border border-line bg-surface p-3 sm:w-[31%]"
                 >
                   <div className="relative aspect-square w-full overflow-hidden rounded-md bg-surface-2">
@@ -171,12 +175,8 @@ export function AddDealsPopup({ candidates, productPillars, freeGiftThresholdPai
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="type-eyebrow text-ink-2">{deal.collectionTitle}</p>
                     <p className="text-sm font-semibold leading-snug text-ink">{deal.name}</p>
-                    <PriceBlock
-                      mrpPaise={paise(deal.variant.mrpPaise)}
-                      pricePaise={paise(deal.variant.pricePaise)}
-                      prefix={deal.variantCount > 1 ? "From" : undefined}
-                      showTaxNote={false}
-                    />
+                    <p className="text-xs font-medium text-ink-2">{deal.sizeLabel}</p>
+                    <PriceBlock mrpPaise={paise(deal.variant.mrpPaise)} pricePaise={paise(deal.variant.pricePaise)} showTaxNote={false} />
                     <Button
                       type="button"
                       size="sm"

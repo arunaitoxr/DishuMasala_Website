@@ -55,4 +55,32 @@ describe("dealShelf", () => {
     const inCart = { pillars: new Set(["blue-tea", "red-tea", "classic-teas", "spices"]), productIds: all };
     expect(dealShelf(["spices"], inCart, byPillar, keepOrder)).toEqual([]);
   });
+
+  it("keeps a product's pack sizes next to each other, and leaves them all out once it's in the cart", () => {
+    // Spices with a card per size: 6 and 7 each come in 100 gm and 200 gm.
+    const sized = new Map([
+      ["blue-tea", [{ productId: 1, size: "" }]],
+      ["red-tea", [{ productId: 3, size: "" }]],
+      ["classic-teas", [{ productId: 5, size: "" }]],
+      ["spices", [{ productId: 6, size: "100 gm" }, { productId: 6, size: "200 gm" }, { productId: 7, size: "100 gm" }, { productId: 7, size: "200 gm" }]],
+    ]);
+    const cards = (items: { productId: number; size: string }[]) => items.map((p) => `${p.productId}${p.size ? `:${p.size}` : ""}`);
+    const shelf = dealShelf(["blue-tea"], { pillars: new Set(["blue-tea"]), productIds: new Set([1]) }, sized, keepOrder);
+    expect(cards(shelf)).toEqual(["3", "6:100 gm", "6:200 gm", "5", "7:100 gm", "7:200 gm"]);
+    const withSpice = dealShelf(["blue-tea"], { pillars: new Set(["blue-tea", "spices"]), productIds: new Set([1, 6]) }, sized, keepOrder);
+    expect(cards(withSpice)).toEqual(["3", "5", "7:100 gm", "7:200 gm"]);
+  });
+
+  it("shows the combo packs too, after the four pillars", () => {
+    const withCombos = new Map([
+      ["blue-tea", [{ productId: 1 }]],
+      ["red-tea", [{ productId: 3 }]],
+      ["classic-teas", [{ productId: 5 }]],
+      ["spices", [{ productId: 6 }]],
+      ["tea-combos", [{ productId: 20 }, { productId: 21 }]],
+      ["combos", [{ productId: 30 }]],
+    ]);
+    const shelf = dealShelf(["spices"], { pillars: new Set(["spices"]), productIds: new Set([6]) }, withCombos, keepOrder);
+    expect(ids(shelf)).toEqual([1, 3, 5, 20, 30, 21]);
+  });
 });
